@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Babylon Store Portal</title>
+  <title>Cove Event Floor Plan</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <style>
     html, body {
@@ -36,10 +36,16 @@
       font-weight: 600;
       letter-spacing: 0.5px;
     }
-    #overlay p {
-      margin: 0;
+    #overlay p.context {
+      margin: 0 0 4px 0;
       font-size: 13px;
-      opacity: 0.8;
+      font-weight: 500;
+      opacity: 0.9;
+    }
+    #overlay p.hint {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.65;
     }
     #loading {
       position: fixed;
@@ -149,11 +155,12 @@
   </style>
 </head>
 <body>
-  <div id="loading">Loading store…</div>
+  <div id="loading">Loading floor plan…</div>
   <a id="homeBtn" href="../../index.html">&larr; Home</a>
   <div id="overlay">
-    <h1>Babylon Store</h1>
-    <p>Left-drag to orbit &middot; scroll to zoom &middot; right/middle-drag to pan</p>
+    <h1>Cove Event Floor Plan</h1>
+    <p class="context">National Teacher's Day &middot; Cove Garden</p>
+    <p class="hint">Left-drag to orbit &middot; scroll to zoom &middot; right/middle-drag to pan</p>
   </div>
   <div id="viewControls">
     <button class="viewBtn iconOnly" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">

@@ -7,11 +7,13 @@ A small landing page linking out to a collection of standalone Babylon.js scenes
 ```
 index.html                 landing page with links to each project
 projects/
-  store/index.html          camera/lights in code, model imported from cove-floorplan.glb
-  store/cove-floorplan.glb   the store's model (~28MB)
+  store/index.html          "Cove Event Floor Plan" — camera/lights in code, model from cove-floorplan.glb
+  store/cove-floorplan.glb   the floor plan model (~35MB)
   orbits/index.html         mini solar system with orbiting planets
   playground/index.html     materials/primitives showcase
 ```
+
+`projects/store/` is the floor plan setup for National Teacher's Day at Cove Garden (the folder path is still `store` to avoid breaking existing links — only the page's title/content changed).
 
 Each project page has a "&larr; Home" button (top-right) that links back to the landing page.
 
