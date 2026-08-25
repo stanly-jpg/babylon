@@ -131,7 +131,7 @@
   <a id="homeBtn" href="../../index.html">&larr; Home</a>
   <div id="overlay">
     <h1>Babylon Store</h1>
-    <p>Left-drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
+    <p>Left-drag to orbit &middot; scroll to zoom &middot; right/middle-drag to pan</p>
   </div>
   <div id="viewControls">
     <button class="viewBtn" id="btnDownload" type="button">Download PNG</button>
@@ -162,6 +162,33 @@
     // wheelDeltaPercentage zooms by a percentage of the current distance per
     // scroll tick, so it stays fast whether the model is small or huge.
     camera.wheelDeltaPercentage = 0.04;
+
+    // Middle-mouse-button panning, in addition to the default right-drag
+    // pan. Babylon's built-in pointer input doesn't bind the middle button,
+    // so this drives the camera's own inertialPanningX/Y accumulators —
+    // the same mechanism the default pan input uses — for identical feel.
+    let middlePanning = false;
+    let lastPanX = 0, lastPanY = 0;
+    canvas.addEventListener("pointerdown", (e) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      middlePanning = true;
+      lastPanX = e.clientX;
+      lastPanY = e.clientY;
+      userInteracted = true;
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!middlePanning) return;
+      const dx = e.clientX - lastPanX;
+      const dy = e.clientY - lastPanY;
+      lastPanX = e.clientX;
+      lastPanY = e.clientY;
+      camera.inertialPanningX += -dx / camera.panningSensibility;
+      camera.inertialPanningY += dy / camera.panningSensibility;
+    });
+    window.addEventListener("pointerup", (e) => {
+      if (e.button === 1) middlePanning = false;
+    });
 
     const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
     hemi.intensity = 0.8;
