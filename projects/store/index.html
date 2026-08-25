@@ -298,16 +298,11 @@
     const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
     hemi.intensity = 0.35;
 
-    const sun = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-0.5, -1, 0.4), scene);
-    sun.intensity = 1.4;
-    sun.position = new BABYLON.Vector3(20, 40, -20);
-
-    const shadowGenerator = new BABYLON.ShadowGenerator(1024, sun);
-    shadowGenerator.useBlurExponentialShadowMap = true;
-    shadowGenerator.blurKernel = 32;
-    // So transparent meshes (e.g. the cage's mesh netting) cast a shadow
-    // shaped by their alpha instead of a solid opaque blob.
-    shadowGenerator.transparencyShadow = true;
+    // The shadow-casting light and its ShadowGenerator are set up after the
+    // model loads below, using the "Light" node exported from Blender inside
+    // cove-floorplan.glb (SceneLoader imports lights/cameras along with
+    // meshes) — its position/direction/shadow-frustum settings come from
+    // the source scene rather than being guessed at here.
 
     // Filled in once the model has loaded, used to frame every view preset.
     let modelMin = null, modelMax = null, modelCenter = BABYLON.Vector3.Zero(), modelSize = 12;
@@ -383,6 +378,35 @@
     // out (keeping the filename, or updating it below) to change the model
     // without touching the camera/light/UI code.
     BABYLON.SceneLoader.ImportMeshAsync("", "./", "cove-floorplan.glb", scene).then((result) => {
+      // The glTF's own "Light" node (a DirectionalLight, position/direction
+      // authored in Blender) drives the shadows — matches the setup tuned
+      // in the Babylon Inspector rather than a light we position ourselves.
+      const modelLight = scene.getLightByName("Light");
+      // Babylon's DirectionalLight doesn't re-derive .direction from a
+      // parent node's rotation the way meshes do — the raw imported value
+      // was the glTF default [0,0,-1] (perfectly horizontal, since the
+      // real rotation lives on the light's parent node), which is unable to
+      // light or shadow a horizontal floor at all. Bake the parent's
+      // rotation into the direction once, then detach.
+      if (modelLight.parent) {
+        const worldMatrix = modelLight.parent.getWorldMatrix();
+        modelLight.direction = BABYLON.Vector3.TransformNormal(new BABYLON.Vector3(0, 0, -1), worldMatrix).normalize();
+        modelLight.parent = null;
+      }
+      modelLight.intensity = 1;
+      modelLight.autoUpdateExtends = true;
+      modelLight.autoCalcShadowZBounds = false;
+      modelLight.shadowMinZ = 0;
+      modelLight.shadowMaxZ = 1000;
+
+      const shadowGenerator = new BABYLON.ShadowGenerator(1024, modelLight);
+      shadowGenerator.bias = 0.0001;
+      shadowGenerator.normalBias = 0;
+      shadowGenerator.darkness = 0;
+      // So transparent meshes (e.g. the cage's mesh netting) cast a shadow
+      // shaped by their alpha instead of a solid opaque blob.
+      shadowGenerator.transparencyShadow = true;
+
       // Auto-frame the camera around the loaded model's bounding box
       let min = null, max = null;
       result.meshes.forEach((mesh) => {
@@ -407,7 +431,6 @@
         camera.radius = modelSize * 1.2;
         camera.lowerRadiusLimit = modelSize * 0.1;
         camera.upperRadiusLimit = modelSize * 4;
-        sun.position = modelCenter.add(new BABYLON.Vector3(modelSize, modelSize * 2, -modelSize));
       }
 
       // The cage's netting material ("Material") has a texture with real
