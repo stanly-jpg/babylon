@@ -76,6 +76,54 @@
       background: rgba(20, 24, 36, 0.95);
       border-color: rgba(234, 242, 255, 0.5);
     }
+    #viewControls {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      max-width: calc(100% - 32px);
+      padding: 8px;
+      border-radius: 14px;
+      background: rgba(20, 24, 36, 0.7);
+      border: 1px solid rgba(234, 242, 255, 0.2);
+      backdrop-filter: blur(6px);
+    }
+    #viewControls.ready {
+      display: flex;
+    }
+    #viewControls .divider {
+      width: 1px;
+      align-self: stretch;
+      background: rgba(234, 242, 255, 0.2);
+      margin: 2px 2px;
+    }
+    .viewBtn {
+      appearance: none;
+      border: 1px solid rgba(234, 242, 255, 0.2);
+      background: rgba(234, 242, 255, 0.06);
+      color: #eaf2ff;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      padding: 7px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .viewBtn:hover {
+      background: rgba(234, 242, 255, 0.14);
+    }
+    .viewBtn.active {
+      background: #eaf2ff;
+      color: #12141c;
+      border-color: #eaf2ff;
+    }
   </style>
 </head>
 <body>
@@ -85,6 +133,14 @@
     <h1>Babylon Store</h1>
     <p>Left-drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
   </div>
+  <div id="viewControls">
+    <button class="viewBtn" id="btnDownload" type="button">Download PNG</button>
+    <div class="divider"></div>
+    <button class="viewBtn" data-view="topVertical" type="button">Top (Vertical)</button>
+    <button class="viewBtn" data-view="topHorizontal" type="button">Top (Horizontal)</button>
+    <button class="viewBtn" data-view="diorama30" type="button">Diorama 30&deg;</button>
+    <button class="viewBtn" data-view="diorama60" type="button">Diorama 60&deg;</button>
+  </div>
   <canvas id="renderCanvas"></canvas>
 
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -92,35 +148,158 @@
   <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
   <script>
     const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true, { stencil: true, preserveDrawingBuffer: true });
+    // alpha: true lets the PNG export below capture a transparent
+    // background; it has no effect on normal rendering (the scene's clear
+    // color stays fully opaque except during that export).
+    const engine = new BABYLON.Engine(canvas, true, { stencil: true, preserveDrawingBuffer: true, alpha: true });
 
-    // Loads the store scene from store.babylon. Swap that file out to change
-    // the scene without touching this loader code.
-    BABYLON.SceneLoader.Load("./", "store.babylon", engine, (scene) => {
-      const camera = scene.activeCamera;
-      camera.attachControl(canvas, true);
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0.05, 0.06, 0.09, 1);
 
-      // Idle auto-rotate the camera slowly until the user interacts
-      // (only applies if the loaded scene's active camera is an ArcRotateCamera)
-      if (camera instanceof BABYLON.ArcRotateCamera) {
-        let userInteracted = false;
-        ["pointerdown", "wheel"].forEach((evt) =>
-          canvas.addEventListener(evt, () => (userInteracted = true), { passive: true })
-        );
-        scene.onBeforeRenderObservable.add(() => {
-          if (!userInteracted) {
-            camera.alpha += engine.getDeltaTime() * 0.00008;
-          }
-        });
+    const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.4, Math.PI / 2.5, 12, BABYLON.Vector3.Zero(), scene);
+    camera.attachControl(canvas, true);
+    camera.lowerRadiusLimit = 0.5;
+    // wheelDeltaPercentage zooms by a percentage of the current distance per
+    // scroll tick, so it stays fast whether the model is small or huge.
+    camera.wheelDeltaPercentage = 0.04;
+
+    const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+    hemi.intensity = 0.8;
+
+    const sun = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-0.5, -1, 0.4), scene);
+    sun.intensity = 1.1;
+    sun.position = new BABYLON.Vector3(20, 40, -20);
+
+    const shadowGenerator = new BABYLON.ShadowGenerator(1024, sun);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
+    // So transparent meshes (e.g. the cage's mesh netting) cast a shadow
+    // shaped by their alpha instead of a solid opaque blob.
+    shadowGenerator.transparencyShadow = true;
+
+    // Filled in once the model has loaded, used to frame every view preset.
+    let modelMin = null, modelMax = null, modelCenter = BABYLON.Vector3.Zero(), modelSize = 12;
+
+    // Camera angle presets. Alpha is the horizontal (azimuth) rotation; beta
+    // is measured from straight-down (0deg = top-down, 90deg = horizon-level),
+    // matching Babylon's ArcRotateCamera convention.
+    const VIEWS = {
+      topVertical: { alpha: -Math.PI / 2, beta: 0.0001 },
+      topHorizontal: { alpha: 0, beta: 0.0001 },
+      diorama30: { alpha: -Math.PI / 4, beta: BABYLON.Tools.ToRadians(30) },
+      diorama60: { alpha: -Math.PI / 4, beta: BABYLON.Tools.ToRadians(60) },
+    };
+
+    function setView(name) {
+      const v = VIEWS[name];
+      if (!v || !modelMin) return;
+      userInteracted = true;
+      camera.target = modelCenter.clone();
+      camera.alpha = v.alpha;
+      camera.beta = v.beta;
+      camera.radius = modelSize * 1.2 || 12;
+      document.querySelectorAll(".viewBtn[data-view]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.view === name);
+      });
+    }
+
+    document.querySelectorAll(".viewBtn[data-view]").forEach((btn) => {
+      btn.addEventListener("click", () => setView(btn.dataset.view));
+    });
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function timestampedFilename() {
+      const d = new Date();
+      const stamp =
+        `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}_` +
+        `${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+      return `image_(${stamp}).png`;
+    }
+
+    // Renders one frame with a transparent clear color, captures it, then
+    // restores the normal opaque background for the next animation frame.
+    document.getElementById("btnDownload").addEventListener("click", () => {
+      const originalClearColor = scene.clearColor.clone();
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+      scene.render();
+      const dataUrl = canvas.toDataURL("image/png");
+      scene.clearColor = originalClearColor;
+
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = timestampedFilename();
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    // Idle auto-rotate the camera slowly until the user interacts
+    let userInteracted = false;
+    ["pointerdown", "wheel"].forEach((evt) =>
+      canvas.addEventListener(evt, () => (userInteracted = true), { passive: true })
+    );
+    scene.onBeforeRenderObservable.add(() => {
+      if (!userInteracted) {
+        camera.alpha += engine.getDeltaTime() * 0.00008;
+      }
+    });
+
+    // Loads the store scene's meshes from cove-floorplan.glb. Swap that file
+    // out (keeping the filename, or updating it below) to change the model
+    // without touching the camera/light/UI code.
+    BABYLON.SceneLoader.ImportMeshAsync("", "./", "cove-floorplan.glb", scene).then((result) => {
+      // Auto-frame the camera around the loaded model's bounding box
+      let min = null, max = null;
+      result.meshes.forEach((mesh) => {
+        const info = mesh.getBoundingInfo && mesh.getBoundingInfo();
+        if (!info) return;
+        const bMin = info.boundingBox.minimumWorld;
+        const bMax = info.boundingBox.maximumWorld;
+        min = min ? BABYLON.Vector3.Minimize(min, bMin) : bMin.clone();
+        max = max ? BABYLON.Vector3.Maximize(max, bMax) : bMax.clone();
+
+        if (mesh.getTotalVertices() > 0) {
+          mesh.receiveShadows = true;
+          shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+      if (min && max) {
+        modelMin = min;
+        modelMax = max;
+        modelCenter = min.add(max).scale(0.5);
+        modelSize = max.subtract(min).length() || 12;
+        camera.setTarget(modelCenter);
+        camera.radius = modelSize * 1.2;
+        camera.lowerRadiusLimit = modelSize * 0.1;
+        camera.upperRadiusLimit = modelSize * 4;
+        sun.position = modelCenter.add(new BABYLON.Vector3(modelSize, modelSize * 2, -modelSize));
       }
 
-      engine.runRenderLoop(() => {
-        scene.render();
-      });
+      // The cage's netting material ("Material") has a texture with real
+      // alpha data, but Blender's glTF export defaults new materials to
+      // Blend Mode "Opaque", which drops alpha on export unless changed —
+      // so Babylon loads it fully opaque. Re-enabling alpha here recovers
+      // the transparency without needing to re-export the model.
+      const cageMat = scene.getMaterialByName("Material");
+      if (cageMat && cageMat.albedoTexture) {
+        cageMat.albedoTexture.hasAlpha = true;
+        cageMat.useAlphaFromAlbedoTexture = true;
+        cageMat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+        cageMat.backFaceCulling = false;
+      }
+
+      document.getElementById("viewControls").classList.add("ready");
 
       const loading = document.getElementById("loading");
       loading.style.opacity = "0";
       setTimeout(() => (loading.style.display = "none"), 400);
+    });
+
+    engine.runRenderLoop(() => {
+      scene.render();
     });
 
     window.addEventListener("resize", () => {

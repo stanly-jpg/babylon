@@ -7,21 +7,21 @@ A small landing page linking out to a collection of standalone Babylon.js scenes
 ```
 index.html                 landing page with links to each project
 projects/
-  store/index.html          loads store.babylon via SceneLoader
-  store/store.babylon        the store's scene data (placeholder — swap this file out)
+  store/index.html          camera/lights in code, model imported from cove-floorplan.glb
+  store/cove-floorplan.glb   the store's model (~28MB)
   orbits/index.html         mini solar system with orbiting planets
   playground/index.html     materials/primitives showcase
 ```
 
 Each project page has a "&larr; Home" button (top-right) that links back to the landing page.
 
-### Replacing store.babylon
+### Replacing cove-floorplan.glb
 
-`projects/store/` loads its scene from `store.babylon` (Babylon's native JSON scene format) instead of building meshes in code — `index.html` there just does `BABYLON.SceneLoader.Load("./", "store.babylon", engine, ...)`. The current file is a placeholder (a ground plane + a box). To swap in a real scene:
+`projects/store/index.html` sets up its own camera and lights in code, then imports meshes from `cove-floorplan.glb` with `BABYLON.SceneLoader.ImportMeshAsync("", "./", "cove-floorplan.glb", scene)` and auto-frames the camera to the model's bounding box. To swap in a different model:
 
-1. Export/produce a `.babylon` file (e.g. from the Blender or Unity exporters, or via `BABYLON.SceneSerializer.Serialize(scene)` from a scene you've built in code).
-2. Replace `projects/store/store.babylon` with it, keeping the filename.
-3. `index.html` doesn't need any changes — it loads whatever scene the file defines, including its own camera and lights.
+1. Export a `.glb` from Blender (File → Export → glTF 2.0, format "glTF Binary (.glb)") or any other tool.
+2. Replace `projects/store/cove-floorplan.glb` with it, keeping the filename — or change the filename in `index.html`'s `ImportMeshAsync` call if you'd rather rename it.
+3. Camera framing is automatic; no other code changes needed.
 
 ## Adding a new project
 
