@@ -1,20 +1,34 @@
-# Babylon Store
+# Babylon Projects
 
-A small Babylon.js portal: a walkable/orbitable 3D store with shelving units, products, a checkout counter, and a rotating showcase item. Pure static HTML — no build step, Babylon.js is loaded from the CDN.
+A small landing page linking out to a collection of standalone Babylon.js scenes. No build step — Babylon.js is loaded from the CDN in each project, so everything is static HTML that GitHub Pages can serve as-is.
+
+## Structure
+
+```
+index.html                 landing page with links to each project
+projects/
+  store/index.html          walkable store interior with shelving and products
+  orbits/index.html         mini solar system with orbiting planets
+  playground/index.html     materials/primitives showcase
+```
+
+Each project page has a "&larr; Home" button (top-right) that links back to the landing page.
+
+## Adding a new project
+
+1. Create a new folder under `projects/`, e.g. `projects/my-scene/`.
+2. Add an `index.html` inside it (copy an existing project as a starting point for the home button + loading screen boilerplate).
+3. Add a card for it in the root `index.html` linking to `projects/my-scene/`.
 
 ## Run locally
 
-Just open [index.html](index.html) in a browser, or serve the folder with any static server, e.g.:
+Serve the repo root with any static server, e.g.:
 
 ```bash
 npx serve .
 ```
 
-## Controls
-
-- Left-drag: orbit the camera
-- Scroll: zoom
-- Right-drag: pan
+Then open the printed local URL — the landing page is at `/`, and each project is at `/projects/<name>/`.
 
 ## Deploy on GitHub Pages
 

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Babylon Store Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <style>
+    html, body {
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #05070d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      outline: none;
+      display: block;
+    }
+    #overlay {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      color: #eaf2ff;
+      z-index: 10;
+      pointer-events: none;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    #overlay h1 {
+      margin: 0 0 4px 0;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    #overlay p {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.8;
+    }
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #eaf2ff;
+      font-size: 16px;
+      background: #05070d;
+      z-index: 20;
+      transition: opacity 0.4s ease;
+    }
+    #homeBtn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(20, 24, 36, 0.7);
+      border: 1px solid rgba(234, 242, 255, 0.25);
+      color: #eaf2ff;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      backdrop-filter: blur(6px);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    #homeBtn:hover {
+      background: rgba(20, 24, 36, 0.95);
+      border-color: rgba(234, 242, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading store…</div>
+  <a id="homeBtn" href="../../index.html">&larr; Home</a>
+  <div id="overlay">
+    <h1>Babylon Store</h1>
+    <p>Left-drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
+  </div>
+  <canvas id="renderCanvas"></canvas>
+
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/materials/babylonjs.materials.min.js"></script>
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, { stencil: true, preserveDrawingBuffer: true });
+
+    const createScene = () => {
+      const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.03, 0.04, 0.07, 1);
+      scene.ambientColor = new BABYLON.Color3(0.3, 0.3, 0.35);
+
+      // ---- Camera ----
+      const camera = new BABYLON.ArcRotateCamera(
+        "camera",
+        -Math.PI / 2.6,
+        Math.PI / 2.6,
+        18,
+        new BABYLON.Vector3(0, 2, 0),
+        scene
+      );
+      camera.attachControl(canvas, true);
+      camera.lowerRadiusLimit = 6;
+      camera.upperRadiusLimit = 30;
+      camera.upperBetaLimit = Math.PI / 2.05;
+      camera.wheelPrecision = 40;
+      camera.panningSensibility = 200;
+
+      // ---- Lighting ----
+      const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+      hemi.intensity = 0.6;
+      hemi.groundColor = new BABYLON.Color3(0.15, 0.15, 0.2);
+
+      const sun = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-0.5, -1, 0.4), scene);
+      sun.position = new BABYLON.Vector3(10, 20, -10);
+      sun.intensity = 0.9;
+
+      const shadowGen = new BABYLON.ShadowGenerator(1024, sun);
+      shadowGen.useBlurExponentialShadowMap = true;
+      shadowGen.blurKernel = 32;
+
+      // Warm accent point lights inside the store
+      const accent1 = new BABYLON.PointLight("accent1", new BABYLON.Vector3(-6, 4, -6), scene);
+      accent1.diffuse = new BABYLON.Color3(1, 0.75, 0.45);
+      accent1.intensity = 0.4;
+      const accent2 = new BABYLON.PointLight("accent2", new BABYLON.Vector3(6, 4, -6), scene);
+      accent2.diffuse = new BABYLON.Color3(0.45, 0.7, 1);
+      accent2.intensity = 0.4;
+
+      // ---- Materials ----
+      const floorMat = new BABYLON.StandardMaterial("floorMat", scene);
+      floorMat.diffuseColor = new BABYLON.Color3(0.55, 0.5, 0.42);
+      floorMat.specularColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+      const wallMat = new BABYLON.StandardMaterial("wallMat", scene);
+      wallMat.diffuseColor = new BABYLON.Color3(0.85, 0.83, 0.78);
+      wallMat.specularColor = new BABYLON.Color3(0, 0, 0);
+      wallMat.backFaceCulling = false;
+
+      const shelfMat = new BABYLON.StandardMaterial("shelfMat", scene);
+      shelfMat.diffuseColor = new BABYLON.Color3(0.36, 0.24, 0.15);
+      shelfMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+
+      const counterMat = new BABYLON.StandardMaterial("counterMat", scene);
+      counterMat.diffuseColor = new BABYLON.Color3(0.2, 0.22, 0.28);
+      counterMat.specularColor = new BABYLON.Color3(0.3, 0.3, 0.35);
+      counterMat.specularPower = 64;
+
+      const productColors = [
+        new BABYLON.Color3(0.9, 0.25, 0.25),
+        new BABYLON.Color3(0.95, 0.7, 0.15),
+        new BABYLON.Color3(0.25, 0.7, 0.4),
+        new BABYLON.Color3(0.25, 0.5, 0.95),
+        new BABYLON.Color3(0.7, 0.35, 0.85),
+        new BABYLON.Color3(0.95, 0.5, 0.2),
+      ];
+      const productMats = productColors.map((c, i) => {
+        const m = new BABYLON.StandardMaterial("productMat" + i, scene);
+        m.diffuseColor = c;
+        m.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
+        return m;
+      });
+
+      // ---- Room shell ----
+      const roomW = 20, roomD = 16, roomH = 6;
+
+      const floor = BABYLON.MeshBuilder.CreateGround("floor", { width: roomW, height: roomD }, scene);
+      floor.material = floorMat;
+      floor.receiveShadows = true;
+
+      const backWall = BABYLON.MeshBuilder.CreatePlane("backWall", { width: roomW, height: roomH }, scene);
+      backWall.position = new BABYLON.Vector3(0, roomH / 2, roomD / 2);
+      backWall.rotation.y = Math.PI;
+      backWall.material = wallMat;
+
+      const leftWall = BABYLON.MeshBuilder.CreatePlane("leftWall", { width: roomD, height: roomH }, scene);
+      leftWall.position = new BABYLON.Vector3(-roomW / 2, roomH / 2, 0);
+      leftWall.rotation.y = Math.PI / 2;
+      leftWall.material = wallMat;
+
+      const rightWall = BABYLON.MeshBuilder.CreatePlane("rightWall", { width: roomD, height: roomH }, scene);
+      rightWall.position = new BABYLON.Vector3(roomW / 2, roomH / 2, 0);
+      rightWall.rotation.y = -Math.PI / 2;
+      rightWall.material = wallMat;
+
+      // ---- Store sign (dynamic texture) ----
+      const signPlane = BABYLON.MeshBuilder.CreatePlane("sign", { width: 8, height: 2 }, scene);
+      signPlane.position = new BABYLON.Vector3(0, 4.6, roomD / 2 - 0.05);
+      signPlane.rotation.y = Math.PI;
+      const signTex = new BABYLON.DynamicTexture("signTex", { width: 1024, height: 256 }, scene);
+      signTex.drawText("BABYLON STORE", null, 170, "bold 120px Segoe UI, Arial", "#ffe8b0", "#1c2333", true);
+      const signMat = new BABYLON.StandardMaterial("signMat", scene);
+      signMat.diffuseTexture = signTex;
+      signMat.emissiveTexture = signTex;
+      signMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+      signMat.specularColor = new BABYLON.Color3(0, 0, 0);
+      signPlane.material = signMat;
+
+      // ---- Helper: shelving unit with products ----
+      function buildShelfUnit(x, z, rotY) {
+        const unit = new BABYLON.TransformNode("shelfUnit", scene);
+        unit.position = new BABYLON.Vector3(x, 0, z);
+        unit.rotation.y = rotY;
+
+        const width = 4, depth = 0.6, height = 3.2;
+        const frameThickness = 0.08;
+
+        // side posts
+        [-width / 2, width / 2].forEach((sx) => {
+          const post = BABYLON.MeshBuilder.CreateBox("post", { width: frameThickness, height, depth }, scene);
+          post.position = new BABYLON.Vector3(sx, height / 2, 0);
+          post.material = shelfMat;
+          post.parent = unit;
+          post.receiveShadows = true;
+          shadowGen.addShadowCaster(post);
+        });
+
+        const shelfLevels = [0.1, 1.1, 2.1, 3.05];
+        shelfLevels.forEach((y, levelIdx) => {
+          const shelf = BABYLON.MeshBuilder.CreateBox("shelf", { width, height: 0.08, depth }, scene);
+          shelf.position = new BABYLON.Vector3(0, y, 0);
+          shelf.material = shelfMat;
+          shelf.parent = unit;
+          shelf.receiveShadows = true;
+          shadowGen.addShadowCaster(shelf);
+
+          if (levelIdx === shelfLevels.length - 1) return; // top is just a cap
+
+          // place products on this shelf
+          const productCount = 4;
+          for (let i = 0; i < productCount; i++) {
+            const px = -width / 2 + (i + 0.5) * (width / productCount);
+            const kind = (levelIdx + i) % 3;
+            let product;
+            const mat = productMats[(levelIdx * productCount + i) % productMats.length];
+
+            if (kind === 0) {
+              product = BABYLON.MeshBuilder.CreateBox("prodBox", { size: 0.45 }, scene);
+            } else if (kind === 1) {
+              product = BABYLON.MeshBuilder.CreateCylinder("prodJar", { height: 0.55, diameter: 0.35 }, scene);
+            } else {
+              product = BABYLON.MeshBuilder.CreateSphere("prodBall", { diameter: 0.4 }, scene);
+            }
+            product.material = mat;
+            product.position = new BABYLON.Vector3(px, y + 0.3, 0);
+            product.parent = unit;
+            shadowGen.addShadowCaster(product);
+          }
+        });
+
+        return unit;
+      }
+
+      // Row of shelving units along the back wall
+      const shelfXPositions = [-7.5, -2.5, 2.5, 7.5];
+      shelfXPositions.forEach((x) => buildShelfUnit(x, roomD / 2 - 1, Math.PI));
+
+      // Two shelving units along the left wall, facing into the room
+      [-4, 3].forEach((z) => buildShelfUnit(-roomW / 2 + 1, z, Math.PI / 2));
+
+      // Two shelving units along the right wall, facing into the room
+      [-4, 3].forEach((z) => buildShelfUnit(roomW / 2 - 1, z, -Math.PI / 2));
+
+      // ---- Checkout counter near the entrance ----
+      const counterBase = BABYLON.MeshBuilder.CreateBox("counterBase", { width: 4, height: 1.1, depth: 1 }, scene);
+      counterBase.position = new BABYLON.Vector3(0, 0.55, -roomD / 2 + 3);
+      counterBase.material = counterMat;
+      counterBase.receiveShadows = true;
+      shadowGen.addShadowCaster(counterBase);
+
+      const counterTop = BABYLON.MeshBuilder.CreateBox("counterTop", { width: 4.3, height: 0.1, depth: 1.2 }, scene);
+      counterTop.position = new BABYLON.Vector3(0, 1.15, -roomD / 2 + 3);
+      const topMat = new BABYLON.StandardMaterial("topMat", scene);
+      topMat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.92);
+      topMat.specularColor = new BABYLON.Color3(0.4, 0.4, 0.4);
+      counterTop.material = topMat;
+      shadowGen.addShadowCaster(counterTop);
+
+      // A small register/monitor on the counter
+      const register = BABYLON.MeshBuilder.CreateBox("register", { width: 0.6, height: 0.5, depth: 0.4 }, scene);
+      register.position = new BABYLON.Vector3(-1.2, 1.45, -roomD / 2 + 3);
+      const registerMat = new BABYLON.StandardMaterial("registerMat", scene);
+      registerMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.12);
+      registerMat.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.5);
+      register.material = registerMat;
+      shadowGen.addShadowCaster(register);
+
+      // ---- Floating showcase product in the middle of the store ----
+      const showcasePedestal = BABYLON.MeshBuilder.CreateCylinder("pedestal", { height: 1, diameterTop: 1.4, diameterBottom: 1.7 }, scene);
+      showcasePedestal.position = new BABYLON.Vector3(0, 0.5, 0);
+      showcasePedestal.material = counterMat;
+      showcasePedestal.receiveShadows = true;
+      shadowGen.addShadowCaster(showcasePedestal);
+
+      const showcaseItem = BABYLON.MeshBuilder.CreateTorusKnot("showcaseItem", { radius: 0.6, tube: 0.22, radialSegments: 128, tubularSegments: 64 }, scene);
+      showcaseItem.position = new BABYLON.Vector3(0, 1.9, 0);
+      const showcaseMat = new BABYLON.StandardMaterial("showcaseMat", scene);
+      showcaseMat.diffuseColor = new BABYLON.Color3(0.9, 0.75, 0.2);
+      showcaseMat.specularColor = new BABYLON.Color3(1, 1, 1);
+      showcaseMat.specularPower = 128;
+      showcaseMat.emissiveColor = new BABYLON.Color3(0.15, 0.1, 0.02);
+      showcaseItem.material = showcaseMat;
+      shadowGen.addShadowCaster(showcaseItem);
+
+      const spotlight = new BABYLON.SpotLight(
+        "spotlight",
+        new BABYLON.Vector3(0, 5.5, 0),
+        new BABYLON.Vector3(0, -1, 0),
+        Math.PI / 3,
+        8,
+        scene
+      );
+      spotlight.diffuse = new BABYLON.Color3(1, 0.95, 0.8);
+      spotlight.intensity = 0.8;
+
+      scene.onBeforeRenderObservable.add(() => {
+        const dt = engine.getDeltaTime() / 1000;
+        showcaseItem.rotation.y += dt * 0.6;
+        showcaseItem.rotation.x += dt * 0.15;
+      });
+
+      // Idle auto-rotate the camera slowly until the user interacts
+      let userInteracted = false;
+      ["pointerdown", "wheel"].forEach((evt) =>
+        canvas.addEventListener(evt, () => (userInteracted = true), { passive: true })
+      );
+      scene.onBeforeRenderObservable.add(() => {
+        if (!userInteracted) {
+          camera.alpha += engine.getDeltaTime() * 0.00008;
+        }
+      });
+
+      return scene;
+    };
+
+    const scene = createScene();
+
+    engine.runRenderLoop(() => {
+      scene.render();
+    });
+
+    window.addEventListener("resize", () => {
+      engine.resize();
+    });
+
+    engine.scenes[0].executeWhenReady(() => {
+      const loading = document.getElementById("loading");
+      loading.style.opacity = "0";
+      setTimeout(() => (loading.style.display = "none"), 400);
+    });
+  </script>
+</body>
+</html>
