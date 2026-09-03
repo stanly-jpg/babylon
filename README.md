@@ -11,9 +11,13 @@ projects/
   store/cove-floorplan.glb   the floor plan model (~35MB)
   orbits/index.html         mini solar system with orbiting planets
   playground/index.html     materials/primitives showcase
+  lenovo-event/index.html   "Lenovo Event" — placeholder, duplicated from store/
+  lenovo-event/lenovo-floorplan.glb   placeholder model, to be replaced
 ```
 
 `projects/store/` is the floor plan setup for National Teacher's Day at Cove Garden (the folder path is still `store` to avoid breaking existing links — only the page's title/content changed).
+
+`projects/lenovo-event/` was duplicated from `store/` as a starting point and hasn't been customized yet — swap its `lenovo-floorplan.glb` for the real Lenovo event model the same way described below, and update its title/overlay text in `index.html`.
 
 Each project page has a "&larr; Home" button (top-right) that links back to the landing page.
 

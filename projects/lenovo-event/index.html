@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lenovo Event</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <style>
+    html, body {
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #05070d;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      outline: none;
+      display: block;
+    }
+    #overlay {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      color: #eaf2ff;
+      z-index: 10;
+      pointer-events: none;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    #overlay h1 {
+      margin: 0 0 4px 0;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    #overlay p.context {
+      margin: 0 0 4px 0;
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0.9;
+    }
+    #overlay p.hint {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.65;
+    }
+    #loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #eaf2ff;
+      font-size: 16px;
+      background: #05070d;
+      z-index: 20;
+      transition: opacity 0.4s ease;
+    }
+    #homeBtn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(20, 24, 36, 0.7);
+      border: 1px solid rgba(234, 242, 255, 0.25);
+      color: #eaf2ff;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      backdrop-filter: blur(6px);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    #homeBtn:hover {
+      background: rgba(20, 24, 36, 0.95);
+      border-color: rgba(234, 242, 255, 0.5);
+    }
+    #viewControls {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: none;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      max-width: calc(100% - 24px);
+      padding: 6px;
+      border-radius: 999px;
+      background: rgba(20, 24, 36, 0.7);
+      border: 1px solid rgba(234, 242, 255, 0.2);
+      backdrop-filter: blur(6px);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    #viewControls::-webkit-scrollbar {
+      display: none;
+    }
+    #viewControls.ready {
+      display: flex;
+    }
+    #viewControls .divider {
+      width: 1px;
+      align-self: stretch;
+      background: rgba(234, 242, 255, 0.2);
+      margin: 4px 2px;
+      flex: 0 0 auto;
+    }
+    .viewBtn {
+      appearance: none;
+      border: 1px solid rgba(234, 242, 255, 0.2);
+      background: rgba(234, 242, 255, 0.06);
+      color: #eaf2ff;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: inherit;
+      height: 38px;
+      min-width: 38px;
+      padding: 0 11px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      flex: 0 0 auto;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .viewBtn.iconOnly {
+      width: 38px;
+      padding: 0;
+    }
+    .viewBtn svg {
+      flex: 0 0 auto;
+      display: block;
+    }
+    .viewBtn:hover {
+      background: rgba(234, 242, 255, 0.14);
+    }
+    .viewBtn.active {
+      background: #eaf2ff;
+      color: #12141c;
+      border-color: #eaf2ff;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading floor plan…</div>
+  <a id="homeBtn" href="../../index.html">&larr; Home</a>
+  <div id="overlay">
+    <h1>Lenovo Event</h1>
+    <p class="context">Placeholder model &mdash; to be replaced</p>
+    <p class="hint">Left-drag to orbit &middot; scroll to zoom &middot; right/middle-drag to pan</p>
+  </div>
+  <div id="viewControls">
+    <button class="viewBtn iconOnly" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 3v9" />
+        <path d="M6.5 9L10 12.5L13.5 9" />
+        <path d="M4 15.5h12" />
+      </svg>
+    </button>
+    <div class="divider"></div>
+    <button class="viewBtn iconOnly" data-view="topVertical" type="button" title="Top view (fills vertically)" aria-label="Top view, vertical fill">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+        <rect x="6" y="2.5" width="8" height="15" rx="1.2" />
+      </svg>
+    </button>
+    <button class="viewBtn iconOnly" data-view="topHorizontal" type="button" title="Top view (fills horizontally)" aria-label="Top view, horizontal fill">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+        <rect x="2.5" y="6" width="15" height="8" rx="1.2" />
+      </svg>
+    </button>
+    <button class="viewBtn" data-view="diorama30" type="button" title="Diorama view, 30&deg;" aria-label="Diorama view, 30 degrees">
+      <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+        <path d="M10 2.5L17 6.5V13.5L10 17.5L3 13.5V6.5L10 2.5Z" />
+        <path d="M10 10.5V17.5" />
+        <path d="M3 6.5L10 10.5L17 6.5" />
+      </svg>
+      <span>30&deg;</span>
+    </button>
+    <button class="viewBtn" data-view="diorama60" type="button" title="Diorama view, 60&deg;" aria-label="Diorama view, 60 degrees">
+      <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+        <path d="M10 2.5L17 6.5V13.5L10 17.5L3 13.5V6.5L10 2.5Z" />
+        <path d="M10 10.5V17.5" />
+        <path d="M3 6.5L10 10.5L17 6.5" />
+      </svg>
+      <span>60&deg;</span>
+    </button>
+  </div>
+  <canvas id="renderCanvas"></canvas>
+
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/materials/babylonjs.materials.min.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    // alpha: true lets the PNG export below capture a transparent
+    // background; it has no effect on normal rendering (the scene's clear
+    // color stays fully opaque except during that export).
+    const engine = new BABYLON.Engine(canvas, true, { stencil: true, preserveDrawingBuffer: true, alpha: true });
+
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color4(0.05, 0.06, 0.09, 1);
+
+    const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.4, Math.PI / 2.5, 12, BABYLON.Vector3.Zero(), scene);
+    camera.attachControl(canvas, true);
+    camera.lowerRadiusLimit = 0.5;
+    // wheelDeltaPercentage zooms by a percentage of the current distance per
+    // scroll tick, so it stays fast whether the model is small or huge.
+    camera.wheelDeltaPercentage = 0.04;
+
+    // Middle-mouse-button panning, in addition to the default right-drag
+    // pan. Babylon's built-in pointer input doesn't bind the middle button,
+    // so this drives the camera's own inertialPanningX/Y accumulators —
+    // the same mechanism the default pan input uses — for identical feel.
+    let middlePanning = false;
+    let lastPanX = 0, lastPanY = 0;
+    canvas.addEventListener("pointerdown", (e) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      middlePanning = true;
+      lastPanX = e.clientX;
+      lastPanY = e.clientY;
+      userInteracted = true;
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (!middlePanning) return;
+      const dx = e.clientX - lastPanX;
+      const dy = e.clientY - lastPanY;
+      lastPanX = e.clientX;
+      lastPanY = e.clientY;
+      camera.inertialPanningX += -dx / camera.panningSensibility;
+      camera.inertialPanningY += dy / camera.panningSensibility;
+    });
+    window.addEventListener("pointerup", (e) => {
+      if (e.button === 1) middlePanning = false;
+    });
+
+    // Two-finger touch panning, faster than Babylon's default. Babylon's
+    // pinch-zoom and its own (slower) two-finger pan share one code path in
+    // this version — disabling multiTouchPanning to replace it also breaks
+    // pinch-zoom. So instead we leave the default input running as-is and
+    // add extra panning distance on top of it, which keeps pinch-zoom intact.
+    const TOUCH_PAN_SPEEDUP = 2;
+    const activeTouches = new Map();
+    let touchPanMidpoint = null;
+
+    function touchMidpoint() {
+      const pts = Array.from(activeTouches.values());
+      return { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+    }
+
+    canvas.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "touch") return;
+      activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activeTouches.size === 2) {
+        touchPanMidpoint = touchMidpoint();
+        userInteracted = true;
+      }
+    });
+    canvas.addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "touch" || !activeTouches.has(e.pointerId)) return;
+      activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (activeTouches.size === 2) {
+        const mid = touchMidpoint();
+        if (touchPanMidpoint) {
+          const dx = mid.x - touchPanMidpoint.x;
+          const dy = mid.y - touchPanMidpoint.y;
+          camera.inertialPanningX += (-dx * TOUCH_PAN_SPEEDUP) / camera.panningSensibility;
+          camera.inertialPanningY += (dy * TOUCH_PAN_SPEEDUP) / camera.panningSensibility;
+        }
+        touchPanMidpoint = mid;
+      }
+    });
+    function endTouch(e) {
+      if (e.pointerType !== "touch") return;
+      activeTouches.delete(e.pointerId);
+      touchPanMidpoint = activeTouches.size === 2 ? touchMidpoint() : null;
+    }
+    ["pointerup", "pointercancel"].forEach((evt) => canvas.addEventListener(evt, endTouch));
+
+    // Babylon's default studio environment texture. PBR materials use this
+    // for ambient/reflected light, which is what gives them depth instead of
+    // the flat look you get from direct lights alone. No skybox/ground mesh
+    // added — just the lighting data.
+    scene.createDefaultEnvironment({ createSkybox: false, createGround: false });
+    // The environment texture and the hemispheric light both illuminate
+    // from all directions and aren't blocked by the ShadowGenerator (only
+    // "sun" below is) — at full strength they wash out shadows almost
+    // entirely. Dialed back so shadows stay visible while materials keep
+    // most of the richness the environment texture gives them.
+    scene.environmentIntensity = 0.45;
+
+    const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+    hemi.intensity = 0.35;
+
+    // The shadow-casting light and its ShadowGenerator are set up after the
+    // model loads below, using the "Light" node exported from Blender inside
+    // lenovo-floorplan.glb (SceneLoader imports lights/cameras along with
+    // meshes) — its position/direction/shadow-frustum settings come from
+    // the source scene rather than being guessed at here.
+
+    // Filled in once the model has loaded, used to frame every view preset.
+    let modelMin = null, modelMax = null, modelCenter = BABYLON.Vector3.Zero(), modelSize = 12;
+
+    // Camera angle presets. Alpha is the horizontal (azimuth) rotation; beta
+    // is measured from straight-down (0deg = top-down, 90deg = horizon-level),
+    // matching Babylon's ArcRotateCamera convention.
+    const VIEWS = {
+      topVertical: { alpha: -Math.PI / 2, beta: 0.0001 },
+      topHorizontal: { alpha: 0, beta: 0.0001 },
+      diorama30: { alpha: -Math.PI / 4, beta: BABYLON.Tools.ToRadians(30) },
+      diorama60: { alpha: -Math.PI / 4, beta: BABYLON.Tools.ToRadians(60) },
+    };
+
+    function setView(name) {
+      const v = VIEWS[name];
+      if (!v || !modelMin) return;
+      userInteracted = true;
+      camera.target = modelCenter.clone();
+      camera.alpha = v.alpha;
+      camera.beta = v.beta;
+      camera.radius = modelSize * 1.2 || 12;
+      document.querySelectorAll(".viewBtn[data-view]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.view === name);
+      });
+    }
+
+    document.querySelectorAll(".viewBtn[data-view]").forEach((btn) => {
+      btn.addEventListener("click", () => setView(btn.dataset.view));
+    });
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+
+    function timestampedFilename() {
+      const d = new Date();
+      const stamp =
+        `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}_` +
+        `${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+      return `image_(${stamp}).png`;
+    }
+
+    // Renders one frame with a transparent clear color, captures it, then
+    // restores the normal opaque background for the next animation frame.
+    document.getElementById("btnDownload").addEventListener("click", () => {
+      const originalClearColor = scene.clearColor.clone();
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+      scene.render();
+      const dataUrl = canvas.toDataURL("image/png");
+      scene.clearColor = originalClearColor;
+
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = timestampedFilename();
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    // Idle auto-rotate the camera slowly until the user interacts
+    let userInteracted = false;
+    ["pointerdown", "wheel"].forEach((evt) =>
+      canvas.addEventListener(evt, () => (userInteracted = true), { passive: true })
+    );
+    scene.onBeforeRenderObservable.add(() => {
+      if (!userInteracted) {
+        camera.alpha += engine.getDeltaTime() * 0.00008;
+      }
+    });
+
+    // Loads the scene's meshes from lenovo-floorplan.glb. Swap that file
+    // out (keeping the filename, or updating it below) to change the model
+    // without touching the camera/light/UI code.
+    BABYLON.SceneLoader.ImportMeshAsync("", "./", "lenovo-floorplan.glb", scene).then((result) => {
+      // Prefer the glTF's own "Light" node if this model has one (position/
+      // direction authored in Blender) — matches the setup tuned in the
+      // Babylon Inspector rather than a light we position ourselves. Falls
+      // back to a generic directional light otherwise, so this page keeps
+      // working no matter what placeholder/final model ends up here.
+      let modelLight = scene.getLightByName("Light");
+      if (modelLight) {
+        // Babylon's DirectionalLight doesn't re-derive .direction from a
+        // parent node's rotation the way meshes do — the raw imported value
+        // was the glTF default [0,0,-1] (perfectly horizontal, since the
+        // real rotation lives on the light's parent node), which is unable
+        // to light or shadow a horizontal floor at all. Bake the parent's
+        // rotation into the direction once, then detach.
+        if (modelLight.parent) {
+          const worldMatrix = modelLight.parent.getWorldMatrix();
+          modelLight.direction = BABYLON.Vector3.TransformNormal(new BABYLON.Vector3(0, 0, -1), worldMatrix).normalize();
+          modelLight.parent = null;
+        }
+        modelLight.intensity = 1;
+      } else {
+        modelLight = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-0.5, -1, 0.4), scene);
+        modelLight.intensity = 1.4;
+      }
+      modelLight.autoUpdateExtends = true;
+      modelLight.autoCalcShadowZBounds = false;
+      modelLight.shadowMinZ = 0;
+      modelLight.shadowMaxZ = 1000;
+
+      const shadowGenerator = new BABYLON.ShadowGenerator(1024, modelLight);
+      shadowGenerator.bias = 0.0001;
+      shadowGenerator.normalBias = 0;
+      shadowGenerator.darkness = 0;
+      // So transparent meshes (e.g. the cage's mesh netting) cast a shadow
+      // shaped by their alpha instead of a solid opaque blob.
+      shadowGenerator.transparencyShadow = true;
+
+      // Auto-frame the camera around the loaded model's bounding box
+      let min = null, max = null;
+      result.meshes.forEach((mesh) => {
+        const info = mesh.getBoundingInfo && mesh.getBoundingInfo();
+        if (!info) return;
+        const bMin = info.boundingBox.minimumWorld;
+        const bMax = info.boundingBox.maximumWorld;
+        min = min ? BABYLON.Vector3.Minimize(min, bMin) : bMin.clone();
+        max = max ? BABYLON.Vector3.Maximize(max, bMax) : bMax.clone();
+
+        if (mesh.getTotalVertices() > 0) {
+          mesh.receiveShadows = true;
+          shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+      if (min && max) {
+        modelMin = min;
+        modelMax = max;
+        modelCenter = min.add(max).scale(0.5);
+        modelSize = max.subtract(min).length() || 12;
+        camera.setTarget(modelCenter);
+        camera.radius = modelSize * 1.2;
+        camera.lowerRadiusLimit = modelSize * 0.1;
+        camera.upperRadiusLimit = modelSize * 4;
+        if (modelLight.name === "sun") {
+          modelLight.position = modelCenter.add(new BABYLON.Vector3(modelSize, modelSize * 2, -modelSize));
+        }
+      }
+
+      // The cage's netting material ("Material") has a texture with real
+      // alpha data, but Blender's glTF export defaults new materials to
+      // Blend Mode "Opaque", which drops alpha on export unless changed —
+      // so Babylon loads it fully opaque. Re-enabling alpha here recovers
+      // the transparency without needing to re-export the model.
+      const cageMat = scene.getMaterialByName("Material");
+      if (cageMat && cageMat.albedoTexture) {
+        cageMat.albedoTexture.hasAlpha = true;
+        cageMat.useAlphaFromAlbedoTexture = true;
+        cageMat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+        cageMat.backFaceCulling = false;
+      }
+
+      document.getElementById("viewControls").classList.add("ready");
+
+      const loading = document.getElementById("loading");
+      loading.style.opacity = "0";
+      setTimeout(() => (loading.style.display = "none"), 400);
+    });
+
+    engine.runRenderLoop(() => {
+      scene.render();
+    });
+
+    window.addEventListener("resize", () => {
+      engine.resize();
+    });
+  </script>
+</body>
+</html>
