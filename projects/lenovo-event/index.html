@@ -160,7 +160,7 @@
   <div id="overlay">
     <h1>Lenovo Event</h1>
     <p class="context">Placeholder model &mdash; to be replaced</p>
-    <p class="hint">Left/middle-drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
+    <p class="hint">Left/middle-drag to orbit &middot; scroll to zoom &middot; right-drag to pan &middot; WASD/arrows to move</p>
   </div>
   <div id="viewControls">
     <button class="viewBtn iconOnly" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
@@ -220,20 +220,28 @@
     // scroll tick, so it stays fast whether the model is small or huge.
     camera.wheelDeltaPercentage = 0.04;
 
-    // Middle-mouse-button rotate (orbit), same as left-drag. Babylon's
-    // built-in pointer input doesn't bind the middle button, so this drives
-    // the camera's own inertialAlphaOffset/inertialBetaOffset accumulators —
-    // the same mechanism the default rotate input uses — for identical feel.
-    // Orbits around the camera's current target (wherever panning has left
-    // it), not a fixed world-center point.
+    // Middle-mouse-button rotate, pivoting on the camera's own eye position
+    // (a "look around" turn) rather than orbiting around the target the way
+    // left-drag does. ArcRotateCamera has no such mode built in — it always
+    // keeps target fixed and moves position around it — so this recomputes
+    // target every move to keep position fixed at what it was when the drag
+    // started, given the new alpha/beta. Direct (non-inertial): the target
+    // has to stay in lockstep with alpha/beta every frame for the pivot to
+    // hold, which inertial coasting after release would break.
     let middleRotating = false;
     let lastRotateX = 0, lastRotateY = 0;
+    let rotatePivotPosition = null;
+    let rotateRadius = 0;
+    const lowerBeta = 0.01;
+    const upperBeta = Math.PI - 0.01;
     canvas.addEventListener("pointerdown", (e) => {
       if (e.button !== 1) return;
       e.preventDefault();
       middleRotating = true;
       lastRotateX = e.clientX;
       lastRotateY = e.clientY;
+      rotatePivotPosition = camera.position.clone();
+      rotateRadius = camera.radius;
       userInteracted = true;
     });
     canvas.addEventListener("pointermove", (e) => {
@@ -242,8 +250,14 @@
       const dy = e.clientY - lastRotateY;
       lastRotateX = e.clientX;
       lastRotateY = e.clientY;
-      camera.inertialAlphaOffset -= dx / camera.angularSensibilityX;
-      camera.inertialBetaOffset -= dy / camera.angularSensibilityY;
+      camera.alpha -= dx / camera.angularSensibilityX;
+      camera.beta = BABYLON.Scalar.Clamp(camera.beta - dy / camera.angularSensibilityY, lowerBeta, upperBeta);
+      const dir = new BABYLON.Vector3(
+        Math.cos(camera.alpha) * Math.sin(camera.beta),
+        Math.cos(camera.beta),
+        Math.sin(camera.alpha) * Math.sin(camera.beta)
+      );
+      camera.target = rotatePivotPosition.subtract(dir.scale(rotateRadius));
     });
     window.addEventListener("pointerup", (e) => {
       if (e.button === 1) middleRotating = false;
@@ -291,6 +305,50 @@
       touchPanMidpoint = activeTouches.size === 2 ? touchMidpoint() : null;
     }
     ["pointerup", "pointercancel"].forEach((evt) => canvas.addEventListener(evt, endTouch));
+
+    // WASD / arrow-key walking, relative to the current view direction
+    // (like a standard game camera) rather than fixed world axes. Moves
+    // target only — Babylon recomputes position from target + radius +
+    // alpha/beta each frame, so the camera "walks" while keeping the same
+    // look angle and distance.
+    const heldMoveKeys = new Set();
+    const MOVE_KEYS = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+    window.addEventListener("keydown", (e) => {
+      if (!MOVE_KEYS.has(e.code)) return;
+      e.preventDefault();
+      heldMoveKeys.add(e.code);
+      userInteracted = true;
+    });
+    window.addEventListener("keyup", (e) => {
+      heldMoveKeys.delete(e.code);
+    });
+    window.addEventListener("blur", () => heldMoveKeys.clear());
+
+    scene.onBeforeRenderObservable.add(() => {
+      if (heldMoveKeys.size === 0) return;
+      const dt = engine.getDeltaTime() / 1000;
+      const speed = modelSize * 0.4;
+
+      const forward = camera.target.subtract(camera.position);
+      forward.y = 0;
+      if (forward.lengthSquared() < 1e-6) {
+        forward.copyFromFloats(0, 0, 1);
+      } else {
+        forward.normalize();
+      }
+      const right = BABYLON.Vector3.Cross(BABYLON.Vector3.Up(), forward).normalize();
+
+      const move = BABYLON.Vector3.Zero();
+      if (heldMoveKeys.has("KeyW") || heldMoveKeys.has("ArrowUp")) move.addInPlace(forward);
+      if (heldMoveKeys.has("KeyS") || heldMoveKeys.has("ArrowDown")) move.subtractInPlace(forward);
+      if (heldMoveKeys.has("KeyD") || heldMoveKeys.has("ArrowRight")) move.addInPlace(right);
+      if (heldMoveKeys.has("KeyA") || heldMoveKeys.has("ArrowLeft")) move.subtractInPlace(right);
+
+      if (move.lengthSquared() > 0) {
+        move.normalize().scaleInPlace(speed * dt);
+        camera.target.addInPlace(move);
+      }
+    });
 
     // Babylon's default studio environment texture. PBR materials use this
     // for ambient/reflected light, which is what gives them depth instead of
