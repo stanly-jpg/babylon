@@ -160,7 +160,7 @@
   <div id="overlay">
     <h1>Cove Event Floor Plan</h1>
     <p class="context">National Teacher's Day &middot; Cove Garden</p>
-    <p class="hint">Left-drag to orbit &middot; scroll to zoom &middot; right/middle-drag to pan</p>
+    <p class="hint">Left/middle-drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
   </div>
   <div id="viewControls">
     <button class="viewBtn iconOnly" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
@@ -220,31 +220,33 @@
     // scroll tick, so it stays fast whether the model is small or huge.
     camera.wheelDeltaPercentage = 0.04;
 
-    // Middle-mouse-button panning, in addition to the default right-drag
-    // pan. Babylon's built-in pointer input doesn't bind the middle button,
-    // so this drives the camera's own inertialPanningX/Y accumulators —
-    // the same mechanism the default pan input uses — for identical feel.
-    let middlePanning = false;
-    let lastPanX = 0, lastPanY = 0;
+    // Middle-mouse-button rotate (orbit), same as left-drag. Babylon's
+    // built-in pointer input doesn't bind the middle button, so this drives
+    // the camera's own inertialAlphaOffset/inertialBetaOffset accumulators —
+    // the same mechanism the default rotate input uses — for identical feel.
+    // Orbits around the camera's current target (wherever panning has left
+    // it), not a fixed world-center point.
+    let middleRotating = false;
+    let lastRotateX = 0, lastRotateY = 0;
     canvas.addEventListener("pointerdown", (e) => {
       if (e.button !== 1) return;
       e.preventDefault();
-      middlePanning = true;
-      lastPanX = e.clientX;
-      lastPanY = e.clientY;
+      middleRotating = true;
+      lastRotateX = e.clientX;
+      lastRotateY = e.clientY;
       userInteracted = true;
     });
     canvas.addEventListener("pointermove", (e) => {
-      if (!middlePanning) return;
-      const dx = e.clientX - lastPanX;
-      const dy = e.clientY - lastPanY;
-      lastPanX = e.clientX;
-      lastPanY = e.clientY;
-      camera.inertialPanningX += -dx / camera.panningSensibility;
-      camera.inertialPanningY += dy / camera.panningSensibility;
+      if (!middleRotating) return;
+      const dx = e.clientX - lastRotateX;
+      const dy = e.clientY - lastRotateY;
+      lastRotateX = e.clientX;
+      lastRotateY = e.clientY;
+      camera.inertialAlphaOffset -= dx / camera.angularSensibilityX;
+      camera.inertialBetaOffset -= dy / camera.angularSensibilityY;
     });
     window.addEventListener("pointerup", (e) => {
-      if (e.button === 1) middlePanning = false;
+      if (e.button === 1) middleRotating = false;
     });
 
     // Two-finger touch panning, faster than Babylon's default. Babylon's
