@@ -9,8 +9,6 @@ index.html                 landing page with links to each project
 projects/
   store/index.html          "Cove Event Floor Plan" — camera/lights in code, model from cove-floorplan.glb
   store/cove-floorplan.glb   the floor plan model (~35MB)
-  orbits/index.html         mini solar system with orbiting planets
-  playground/index.html     materials/primitives showcase
   lenovo-event/index.html   "Lenovo Event" — placeholder, duplicated from store/
   lenovo-event/lenovo-floorplan.glb   placeholder model, to be replaced
 ```
