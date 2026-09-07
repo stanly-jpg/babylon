@@ -160,7 +160,7 @@
   <div id="overlay">
     <h1>Lenovo Event</h1>
     <p class="context">Placeholder model &mdash; to be replaced</p>
-    <p class="hint">Left/middle-drag to orbit &middot; scroll to zoom &middot; right-drag to pan &middot; WASD/arrows to move</p>
+    <p class="hint">Left/middle-drag to orbit &middot; scroll/WASD/arrows to move &middot; right-drag to pan</p>
   </div>
   <div id="viewControls">
     <button class="viewBtn iconOnly" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
@@ -216,9 +216,31 @@
     const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.4, Math.PI / 2.5, 12, BABYLON.Vector3.Zero(), scene);
     camera.attachControl(canvas, true);
     camera.lowerRadiusLimit = 0.5;
-    // wheelDeltaPercentage zooms by a percentage of the current distance per
-    // scroll tick, so it stays fast whether the model is small or huge.
-    camera.wheelDeltaPercentage = 0.04;
+
+    // Scroll wheel moves the camera forward/backward through the scene
+    // (dolly) instead of the default zoom (shrinking radius toward target).
+    // Like WASD, this shifts target — position is recomputed from it each
+    // frame, so the whole rig translates while alpha/beta/radius stay put.
+    // Distance-proportional per tick, so it stays fast far away and precise
+    // up close, matching how the old radius-based zoom felt. The built-in
+    // wheel input has to be detached first, or it'd also shrink radius on
+    // every tick alongside this.
+    camera.inputs.attached.mousewheel.detachControl(canvas);
+    const WHEEL_MOVE_PERCENT = 0.06;
+    canvas.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        userInteracted = true;
+        const toTarget = camera.target.subtract(camera.position);
+        const dist = toTarget.length();
+        if (dist < 1e-6) return;
+        toTarget.scaleInPlace(1 / dist);
+        const moveDist = -Math.sign(e.deltaY) * dist * WHEEL_MOVE_PERCENT;
+        camera.target.addInPlace(toTarget.scale(moveDist));
+      },
+      { passive: false }
+    );
 
     // Middle-mouse-button rotate, pivoting on the camera's own eye position
     // (a "look around" turn) rather than orbiting around the target the way
@@ -306,11 +328,15 @@
     }
     ["pointerup", "pointercancel"].forEach((evt) => canvas.addEventListener(evt, endTouch));
 
-    // WASD / arrow-key walking, relative to the current view direction
-    // (like a standard game camera) rather than fixed world axes. Moves
-    // target only — Babylon recomputes position from target + radius +
-    // alpha/beta each frame, so the camera "walks" while keeping the same
-    // look angle and distance.
+    // WASD / arrow-key flying, relative to the current view direction (like
+    // a standard game camera) rather than fixed world axes. W/S move along
+    // the full 3D look direction (including pitch, so looking up/down moves
+    // you up/down too); A/D strafe horizontally — cross(worldUp, forward)
+    // always has zero Y regardless of forward's pitch, so strafing stays
+    // level without needing a separately flattened vector. Moves target
+    // only — Babylon recomputes position from target + radius + alpha/beta
+    // each frame, so the camera flies while keeping the same look angle and
+    // distance.
     const heldMoveKeys = new Set();
     const MOVE_KEYS = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
     window.addEventListener("keydown", (e) => {
@@ -330,7 +356,6 @@
       const speed = modelSize * 0.4;
 
       const forward = camera.target.subtract(camera.position);
-      forward.y = 0;
       if (forward.lengthSquared() < 1e-6) {
         forward.copyFromFloats(0, 0, 1);
       } else {
