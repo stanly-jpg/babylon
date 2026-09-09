@@ -1,5 +1,10 @@
 1 SECOND TEXT
 2 SECOND TEXT
 3 SECOND TEXT
+
+new line 1
+new line 2
+new line 3
+
 4 SECOND TEXT
 5 SECOND TEXT
