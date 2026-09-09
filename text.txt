@@ -1,5 +1,10 @@
-FIRST TEXT
+IMPORT VARIABLES
 
 
+i inserted new changes here
+
+
+SECOND TEXT
+THIRD TEXT
 new changes in this code block
 FIRST TEXT NEW code blocks
