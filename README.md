@@ -1,37 +1,45 @@
 # Babylon Projects
 
-A small landing page linking out to a collection of standalone Babylon.js scenes. No build step — Babylon.js is loaded from the CDN in each project, so everything is static HTML that GitHub Pages can serve as-is.
+A single-page Babylon.js viewer with a project sidebar. No build step — Babylon.js is loaded from the CDN, so everything is static HTML that GitHub Pages can serve as-is.
 
 ## Structure
 
 ```
-index.html                 landing page with links to each project
+index.html                          the entire app: sidebar, viewer, all camera/light/UI code
 projects/
-  store/index.html          "Cove Event Floor Plan" — camera/lights in code, model from cove-floorplan.glb
-  store/cove-floorplan.glb   the floor plan model (~35MB)
-  lenovo-event/index.html   "Lenovo Event" — placeholder, duplicated from store/
-  lenovo-event/lenovo-floorplan.glb   placeholder model, to be replaced
+  store/cove-floorplan.glb           "Cove Event Floor Plan" model (~35MB)
+  lenovo-event/lenovo-floorplan.glb  "Lenovo Event" model (placeholder, to be replaced)
 ```
 
-`projects/store/` is the floor plan setup for National Teacher's Day at Cove Garden (the folder path is still `store` to avoid breaking existing links — only the page's title/content changed).
+There's only one HTML page. The `PROJECTS` array near the top of `index.html`'s `<script>` lists each project (id, title, context line, and where its `.glb` lives); the sidebar is rendered from that array, and picking one loads its model into the same Babylon scene. The `projects/<name>/` folders now hold nothing but the model file — the per-project `index.html` pages that used to live there are gone.
 
-`projects/lenovo-event/` was duplicated from `store/` as a starting point and hasn't been customized yet — swap its `lenovo-floorplan.glb` for the real Lenovo event model the same way described below, and update its title/overlay text in `index.html`.
-
-Each project page has a "&larr; Home" button (top-right) that links back to the landing page.
-
-### Replacing cove-floorplan.glb
-
-`projects/store/index.html` sets up its own camera and lights in code, then imports meshes from `cove-floorplan.glb` with `BABYLON.SceneLoader.ImportMeshAsync("", "./", "cove-floorplan.glb", scene)` and auto-frames the camera to the model's bounding box. To swap in a different model:
-
-1. Export a `.glb` from Blender (File → Export → glTF 2.0, format "glTF Binary (.glb)") or any other tool.
-2. Replace `projects/store/cove-floorplan.glb` with it, keeping the filename — or change the filename in `index.html`'s `ImportMeshAsync` call if you'd rather rename it.
-3. Camera framing is automatic; no other code changes needed.
+Opening the site with no `#hash` loads `PROJECTS[0]` (currently Cove). Each project also gets its own URL — `/#cove`, `/#lenovo` — so links to a specific project are shareable and survive a refresh; the back/forward buttons work too.
 
 ## Adding a new project
 
-1. Create a new folder under `projects/`, e.g. `projects/my-scene/`.
-2. Add an `index.html` inside it (copy an existing project as a starting point for the home button + loading screen boilerplate).
-3. Add a card for it in the root `index.html` linking to `projects/my-scene/`.
+1. Put its `.glb` somewhere under `projects/`, e.g. `projects/my-scene/my-scene.glb`.
+2. Add an entry to the `PROJECTS` array in `index.html`:
+   ```js
+   { id: "my-scene", tag: "Scene 03", title: "My Scene", context: "Short description",
+     rootUrl: "projects/my-scene/", fileName: "my-scene.glb" }
+   ```
+3. That's it — the sidebar entry, routing, camera framing, shadows, and lighting are all generic and driven by this array.
+
+If the model has its own light node named `"Light"` (e.g. exported from Blender with a Sun), the viewer uses it for shadows automatically (including compensating for a case where the light's rotation lives on a parent node rather than the light itself). Otherwise it falls back to a generic directional light positioned above the model.
+
+## Camera controls
+
+Plain Babylon.js defaults (same as the [Babylon.js Sandbox](https://sandbox.babylonjs.com/)) — no custom overrides:
+
+- Left-drag: orbit around the model
+- Scroll: zoom
+- Right-drag: pan
+
+The camera buttons (bottom of the viewer) are unaffected by this and still work as before: Download PNG (transparent background), Top (Vertical), Top (Horizontal), Diorama 30°, Diorama 60°.
+
+## Responsive layout
+
+The sidebar is a slide-in drawer (hamburger button, top-left) on phones and tablets, and a persistent panel that pushes the viewer over on wider screens (≥900px) — toggle it either way with the same button. Selecting a project on a narrow screen closes the drawer automatically.
 
 ## Run locally
 
@@ -41,7 +49,7 @@ Serve the repo root with any static server, e.g.:
 npx serve .
 ```
 
-Then open the printed local URL — the landing page is at `/`, and each project is at `/projects/<name>/`.
+Then open the printed local URL.
 
 ## Deploy on GitHub Pages
 

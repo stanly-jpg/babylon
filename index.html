@@ -3,168 +3,678 @@
 <head>
   <meta charset="utf-8" />
   <title>Babylon Projects</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <style>
     :root {
-      color-scheme: dark;
+      --sidebar-w: 280px;
     }
     * {
       box-sizing: border-box;
     }
     html, body {
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
       margin: 0;
       padding: 0;
-      min-height: 100%;
-      background: radial-gradient(circle at 20% -10%, #1b1330 0%, #05060c 55%, #030308 100%);
+      background: #05070d;
       color: #eef1fb;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
-    .wrap {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 72px 24px 64px;
+
+    /* ---- Sidebar ---- */
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: var(--sidebar-w);
+      max-width: 84vw;
+      background: radial-gradient(circle at 20% -10%, #1b1330 0%, #0a0c16 60%, #05060c 100%);
+      border-right: 1px solid rgba(255, 255, 255, 0.09);
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
     }
-    header {
-      margin-bottom: 48px;
+    #sidebar.open {
+      transform: translateX(0);
+    }
+    .sidebar-header {
+      padding: 22px 20px 14px;
+      flex: 0 0 auto;
     }
     .eyebrow {
       display: inline-block;
-      font-size: 12px;
+      font-size: 11px;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: #9fb3ff;
       background: rgba(120, 140, 255, 0.12);
       border: 1px solid rgba(120, 140, 255, 0.3);
-      padding: 4px 10px;
+      padding: 3px 9px;
       border-radius: 999px;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
-    h1 {
-      font-size: 38px;
-      line-height: 1.15;
-      margin: 0 0 12px;
+    .sidebar-header h1 {
+      font-size: 19px;
+      margin: 0 0 6px;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
     }
-    header p {
-      font-size: 16px;
+    .sidebar-header p {
+      font-size: 12.5px;
       color: #aab0c8;
-      max-width: 560px;
       margin: 0;
-      line-height: 1.5;
+      line-height: 1.45;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px;
-    }
-    .card {
-      position: relative;
+    #projectList {
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      min-height: 220px;
-      padding: 26px;
-      border-radius: 18px;
-      background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015));
-      border: 1px solid rgba(255,255,255,0.09);
-      text-decoration: none;
+      gap: 8px;
+      padding: 6px 14px 20px;
+      flex: 1 1 auto;
+    }
+    .projectItem {
+      appearance: none;
+      text-align: left;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
+      border-radius: 14px;
+      padding: 12px 14px;
       color: inherit;
-      overflow: hidden;
-      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background 0.15s ease;
     }
-    .card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(255,255,255,0.22);
-      background: linear-gradient(160deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+    .projectItem:hover {
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
     }
-    .card .glow {
-      position: absolute;
-      top: -40%;
-      right: -30%;
-      width: 220px;
-      height: 220px;
-      border-radius: 50%;
-      filter: blur(50px);
-      opacity: 0.5;
-      pointer-events: none;
+    .projectItem.active {
+      border-color: rgba(159, 179, 255, 0.6);
+      background: linear-gradient(160deg, rgba(120, 140, 255, 0.2), rgba(120, 140, 255, 0.04));
     }
-    .card .tag {
-      font-size: 11px;
+    .projectItem .tag {
+      display: block;
+      font-size: 10px;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #9fb3ff;
-      margin-bottom: 10px;
+      margin-bottom: 4px;
     }
-    .card h2 {
-      font-size: 21px;
-      margin: 0 0 8px;
+    .projectItem .name {
+      display: block;
+      font-size: 14.5px;
       font-weight: 650;
     }
-    .card p {
-      font-size: 14px;
-      color: #a9afc7;
-      line-height: 1.5;
-      margin: 0;
+    .sidebar-footer {
+      flex: 0 0 auto;
+      padding: 12px 20px 18px;
+      font-size: 11px;
+      color: #666d85;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
-    .card .cta {
-      margin-top: 20px;
+    .sidebar-footer a {
+      color: #9fb3ff;
+    }
+
+    #sidebarBackdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 35;
+    }
+    #sidebar.open ~ #sidebarBackdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    @media (min-width: 900px) {
+      #sidebar.open ~ #sidebarBackdrop {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #sidebar.open ~ #viewer {
+        margin-left: var(--sidebar-w);
+      }
+    }
+
+    /* ---- Viewer ---- */
+    #viewer {
+      position: fixed;
+      inset: 0;
+      margin-left: 0;
+      transition: margin-left 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      background: #05070d;
+      z-index: 10;
+    }
+    #topbar {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      z-index: 15;
+    }
+    #sidebarToggle {
+      appearance: none;
+      flex: 0 0 auto;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      border: 1px solid rgba(234, 242, 255, 0.2);
+      background: rgba(20, 24, 36, 0.7);
+      color: #eaf2ff;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      font-size: 13px;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    #sidebarToggle:hover {
+      background: rgba(20, 24, 36, 0.95);
+      border-color: rgba(234, 242, 255, 0.5);
+    }
+    #topbar .titles {
+      min-width: 0;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    }
+    #topbar .titles h2 {
+      margin: 0;
+      font-size: 17px;
       font-weight: 600;
-      color: #eef1fb;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .card .cta .arrow {
-      transition: transform 0.2s ease;
-    }
-    .card:hover .cta .arrow {
-      transform: translateX(4px);
-    }
-    footer {
-      margin-top: 56px;
+    #topbar .titles p {
+      margin: 2px 0 0;
       font-size: 12px;
-      color: #666d85;
+      opacity: 0.7;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    footer a {
-      color: #9fb3ff;
+
+    #canvasWrap {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    #renderCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      outline: none;
+      display: block;
+    }
+    #loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #eaf2ff;
+      font-size: 15px;
+      background: #05070d;
+      z-index: 5;
+      transition: opacity 0.4s ease;
+    }
+    #hint {
+      position: absolute;
+      left: 16px;
+      bottom: 20px;
+      z-index: 5;
+      margin: 0;
+      font-size: 12px;
+      color: #eaf2ff;
+      opacity: 0.6;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+      pointer-events: none;
+    }
+    #viewControls {
+      position: absolute;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      z-index: 6;
+      display: none;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      max-width: calc(100% - 24px);
+      padding: 6px;
+      border-radius: 999px;
+      background: rgba(20, 24, 36, 0.7);
+      border: 1px solid rgba(234, 242, 255, 0.2);
+      backdrop-filter: blur(6px);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    #viewControls::-webkit-scrollbar {
+      display: none;
+    }
+    #viewControls.ready {
+      display: flex;
+    }
+    #viewControls .divider {
+      width: 1px;
+      align-self: stretch;
+      background: rgba(234, 242, 255, 0.2);
+      margin: 4px 2px;
+      flex: 0 0 auto;
+    }
+    .viewBtn {
+      appearance: none;
+      border: 1px solid rgba(234, 242, 255, 0.2);
+      background: rgba(234, 242, 255, 0.06);
+      color: #eaf2ff;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: inherit;
+      height: 38px;
+      min-width: 38px;
+      padding: 0 11px;
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      flex: 0 0 auto;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .viewBtn.iconOnly {
+      width: 38px;
+      padding: 0;
+    }
+    .viewBtn svg {
+      flex: 0 0 auto;
+      display: block;
+    }
+    .viewBtn:hover {
+      background: rgba(234, 242, 255, 0.14);
+    }
+    .viewBtn.active {
+      background: #eaf2ff;
+      color: #12141c;
+      border-color: #eaf2ff;
+    }
+
+    @media (max-width: 480px) {
+      #hint {
+        display: none;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
+  <aside id="sidebar">
+    <div class="sidebar-header">
       <span class="eyebrow">Babylon.js Portal</span>
       <h1>Babylon Projects</h1>
-      <p>A small collection of Babylon.js scenes, each living in its own folder. Pick one to explore — every project links back here.</p>
-    </header>
+      <p>Pick a project to load it in the viewer.</p>
+    </div>
+    <nav id="projectList"></nav>
+    <div class="sidebar-footer">
+      Built with <a href="https://www.babylonjs.com/" target="_blank" rel="noopener">Babylon.js</a>.
+    </div>
+  </aside>
+  <div id="sidebarBackdrop"></div>
 
-    <div class="grid">
-      <a class="card" href="projects/store/index.html">
-        <div class="glow" style="background:#ff8a3d;"></div>
-        <div>
-          <div class="tag">Scene 01</div>
-          <h2>Cove Event Floor Plan</h2>
-          <p>Floor plan setup for National Teacher's Day at Cove Garden — walk the space, switch between top-down and diorama views, and export a PNG.</p>
-        </div>
-        <span class="cta">Open project <span class="arrow">&rarr;</span></span>
-      </a>
-
-      <a class="card" href="projects/lenovo-event/index.html">
-        <div class="glow" style="background:#e2231a;"></div>
-        <div>
-          <div class="tag">Scene 02</div>
-          <h2>Lenovo Event</h2>
-          <p>Placeholder — duplicated from the Cove floor plan for now, model to be replaced.</p>
-        </div>
-        <span class="cta">Open project <span class="arrow">&rarr;</span></span>
-      </a>
+  <main id="viewer">
+    <div id="topbar">
+      <button id="sidebarToggle" type="button" aria-label="Toggle project list">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M3 5.5h14" />
+          <path d="M3 10h14" />
+          <path d="M3 14.5h14" />
+        </svg>
+      </button>
+      <div class="titles">
+        <h2 id="projectTitle">&nbsp;</h2>
+        <p id="projectContext">&nbsp;</p>
+      </div>
     </div>
 
-    <footer>
-      Built with <a href="https://www.babylonjs.com/" target="_blank" rel="noopener">Babylon.js</a>. Each project has its own "&larr; Home" button to return here.
-    </footer>
-  </div>
+    <div id="canvasWrap">
+      <canvas id="renderCanvas"></canvas>
+      <div id="loading">Loading&hellip;</div>
+      <p id="hint">Left-drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
+
+      <div id="viewControls">
+        <button class="viewBtn iconOnly" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 3v9" />
+            <path d="M6.5 9L10 12.5L13.5 9" />
+            <path d="M4 15.5h12" />
+          </svg>
+        </button>
+        <div class="divider"></div>
+        <button class="viewBtn iconOnly" data-view="topVertical" type="button" title="Top view (fills vertically)" aria-label="Top view, vertical fill">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+            <rect x="6" y="2.5" width="8" height="15" rx="1.2" />
+          </svg>
+        </button>
+        <button class="viewBtn iconOnly" data-view="topHorizontal" type="button" title="Top view (fills horizontally)" aria-label="Top view, horizontal fill">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+            <rect x="2.5" y="6" width="15" height="8" rx="1.2" />
+          </svg>
+        </button>
+        <button class="viewBtn" data-view="diorama30" type="button" title="Diorama view, 30&deg;" aria-label="Diorama view, 30 degrees">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+            <path d="M10 2.5L17 6.5V13.5L10 17.5L3 13.5V6.5L10 2.5Z" />
+            <path d="M10 10.5V17.5" />
+            <path d="M3 6.5L10 10.5L17 6.5" />
+          </svg>
+          <span>30&deg;</span>
+        </button>
+        <button class="viewBtn" data-view="diorama60" type="button" title="Diorama view, 60&deg;" aria-label="Diorama view, 60 degrees">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+            <path d="M10 2.5L17 6.5V13.5L10 17.5L3 13.5V6.5L10 2.5Z" />
+            <path d="M10 10.5V17.5" />
+            <path d="M3 6.5L10 10.5L17 6.5" />
+          </svg>
+          <span>60&deg;</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/materials/babylonjs.materials.min.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script>
+    // ---- Project list ----
+    // modelPath is "<rootUrl>|<filename>" split at load time. Add new
+    // projects here — no other code needs to change.
+    const PROJECTS = [
+      {
+        id: "cove",
+        tag: "Scene 01",
+        title: "Cove Event Floor Plan",
+        context: "National Teacher's Day · Cove Garden",
+        rootUrl: "projects/store/",
+        fileName: "cove-floorplan.glb",
+      },
+      {
+        id: "lenovo",
+        tag: "Scene 02",
+        title: "Lenovo Event",
+        context: "Placeholder model — to be replaced",
+        rootUrl: "projects/lenovo-event/",
+        fileName: "lenovo-floorplan.glb",
+      },
+    ];
+
+    const canvas = document.getElementById("renderCanvas");
+    const sidebar = document.getElementById("sidebar");
+    const sidebarBackdrop = document.getElementById("sidebarBackdrop");
+    const projectListEl = document.getElementById("projectList");
+    const projectTitleEl = document.getElementById("projectTitle");
+    const projectContextEl = document.getElementById("projectContext");
+    const loadingEl = document.getElementById("loading");
+    const viewControlsEl = document.getElementById("viewControls");
+
+    // alpha: true lets the PNG export below capture a transparent
+    // background; it has no effect on normal rendering (the scene's clear
+    // color stays fully opaque except during that export).
+    const engine = new BABYLON.Engine(canvas, true, { stencil: true, preserveDrawingBuffer: true, alpha: true });
+
+    // Reassigned on every project switch; other code below reads these
+    // through closures, so it always sees whatever is currently loaded.
+    let scene = null;
+    let camera = null;
+    let modelMin = null, modelMax = null, modelCenter = BABYLON.Vector3.Zero(), modelSize = 12;
+    let userInteracted = false;
+
+    // Camera angle presets. Alpha is the horizontal (azimuth) rotation; beta
+    // is measured from straight-down (0deg = top-down, 90deg = horizon-level),
+    // matching Babylon's ArcRotateCamera convention.
+    const VIEWS = {
+      topVertical: { alpha: -Math.PI / 2, beta: 0.0001 },
+      topHorizontal: { alpha: 0, beta: 0.0001 },
+      diorama30: { alpha: -Math.PI / 4, beta: BABYLON.Tools.ToRadians(30) },
+      diorama60: { alpha: -Math.PI / 4, beta: BABYLON.Tools.ToRadians(60) },
+    };
+
+    function setView(name) {
+      const v = VIEWS[name];
+      if (!v || !modelMin || !camera) return;
+      userInteracted = true;
+      camera.target = modelCenter.clone();
+      camera.alpha = v.alpha;
+      camera.beta = v.beta;
+      camera.radius = modelSize * 1.2 || 12;
+      document.querySelectorAll(".viewBtn[data-view]").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.view === name);
+      });
+    }
+    document.querySelectorAll(".viewBtn[data-view]").forEach((btn) => {
+      btn.addEventListener("click", () => setView(btn.dataset.view));
+    });
+
+    function pad2(n) {
+      return String(n).padStart(2, "0");
+    }
+    function timestampedFilename() {
+      const d = new Date();
+      const stamp =
+        `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}_` +
+        `${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+      return `image_(${stamp}).png`;
+    }
+    // Renders one frame with a transparent clear color, captures it, then
+    // restores the normal opaque background for the next animation frame.
+    document.getElementById("btnDownload").addEventListener("click", () => {
+      if (!scene) return;
+      const originalClearColor = scene.clearColor.clone();
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+      scene.render();
+      const dataUrl = canvas.toDataURL("image/png");
+      scene.clearColor = originalClearColor;
+
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = timestampedFilename();
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    // ---- Sidebar open/close ----
+    function setSidebarOpen(open) {
+      sidebar.classList.toggle("open", open);
+    }
+    document.getElementById("sidebarToggle").addEventListener("click", () => {
+      setSidebarOpen(!sidebar.classList.contains("open"));
+    });
+    sidebarBackdrop.addEventListener("click", () => setSidebarOpen(false));
+    setSidebarOpen(window.matchMedia("(min-width: 900px)").matches);
+
+    function renderProjectList(activeId) {
+      projectListEl.innerHTML = "";
+      PROJECTS.forEach((p) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "projectItem" + (p.id === activeId ? " active" : "");
+        btn.innerHTML = `<span class="tag">${p.tag}</span><span class="name">${p.title}</span>`;
+        btn.addEventListener("click", () => {
+          selectProject(p.id);
+          if (!window.matchMedia("(min-width: 900px)").matches) setSidebarOpen(false);
+        });
+        projectListEl.appendChild(btn);
+      });
+    }
+
+    // ---- Scene (re)construction ----
+    // Tears down the previous scene entirely and builds a fresh one for the
+    // given project. Camera controls are left at Babylon's defaults
+    // (left-drag orbit, right-drag pan, scroll zoom) — same as the Babylon.js
+    // sandbox, no custom overrides.
+    function loadProject(project) {
+      loadingEl.style.display = "flex";
+      loadingEl.style.opacity = "1";
+      viewControlsEl.classList.remove("ready");
+      document.querySelectorAll(".viewBtn[data-view]").forEach((b) => b.classList.remove("active"));
+      projectTitleEl.textContent = project.title;
+      projectContextEl.textContent = project.context;
+
+      if (scene) scene.dispose();
+
+      scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.05, 0.06, 0.09, 1);
+
+      camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.4, Math.PI / 2.5, 12, BABYLON.Vector3.Zero(), scene);
+      camera.attachControl(canvas, true);
+      camera.lowerRadiusLimit = 0.5;
+
+      // Babylon's default studio environment texture. PBR materials use
+      // this for ambient/reflected light, which is what gives them depth
+      // instead of the flat look you get from direct lights alone.
+      scene.createDefaultEnvironment({ createSkybox: false, createGround: false });
+      // The environment texture and the hemispheric light both illuminate
+      // from all directions and aren't blocked by the ShadowGenerator (only
+      // the model's own light below is) — at full strength they wash out
+      // shadows almost entirely. Dialed back so shadows stay visible while
+      // materials keep most of the richness the environment texture gives.
+      scene.environmentIntensity = 0.45;
+
+      const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+      hemi.intensity = 0.35;
+
+      modelMin = null;
+      modelMax = null;
+      modelCenter = BABYLON.Vector3.Zero();
+      modelSize = 12;
+      userInteracted = false;
+
+      // Idle auto-rotate the camera slowly until the user interacts
+      scene.onBeforeRenderObservable.add(() => {
+        if (!userInteracted) {
+          camera.alpha += engine.getDeltaTime() * 0.00008;
+        }
+      });
+
+      BABYLON.SceneLoader.ImportMeshAsync("", project.rootUrl, project.fileName, scene).then((result) => {
+        // Prefer the glTF's own "Light" node if this model has one
+        // (position/direction authored in Blender) — matches the setup
+        // tuned in the Babylon Inspector rather than a light we position
+        // ourselves. Falls back to a generic directional light otherwise.
+        let modelLight = scene.getLightByName("Light");
+        let usingFallbackLight = false;
+        if (modelLight) {
+          // Babylon's DirectionalLight doesn't re-derive .direction from a
+          // parent node's rotation the way meshes do — the raw imported
+          // value is the glTF default [0,0,-1] (perfectly horizontal) when
+          // the real rotation lives on the light's parent node instead.
+          // Bake the parent's rotation into the direction once, then detach.
+          if (modelLight.parent) {
+            const worldMatrix = modelLight.parent.getWorldMatrix();
+            modelLight.direction = BABYLON.Vector3.TransformNormal(new BABYLON.Vector3(0, 0, -1), worldMatrix).normalize();
+            modelLight.parent = null;
+          }
+          modelLight.intensity = 1;
+        } else {
+          modelLight = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-0.5, -1, 0.4), scene);
+          modelLight.intensity = 1.4;
+          usingFallbackLight = true;
+        }
+        modelLight.autoUpdateExtends = true;
+        modelLight.autoCalcShadowZBounds = false;
+        modelLight.shadowMinZ = 0;
+        modelLight.shadowMaxZ = 1000;
+
+        const shadowGenerator = new BABYLON.ShadowGenerator(1024, modelLight);
+        shadowGenerator.bias = 0.0001;
+        shadowGenerator.normalBias = 0;
+        shadowGenerator.darkness = 0;
+        // So transparent meshes (e.g. a cage's mesh netting) cast a shadow
+        // shaped by their alpha instead of a solid opaque blob.
+        shadowGenerator.transparencyShadow = true;
+
+        // Auto-frame the camera around the loaded model's bounding box
+        let min = null, max = null;
+        result.meshes.forEach((mesh) => {
+          const info = mesh.getBoundingInfo && mesh.getBoundingInfo();
+          if (!info) return;
+          const bMin = info.boundingBox.minimumWorld;
+          const bMax = info.boundingBox.maximumWorld;
+          min = min ? BABYLON.Vector3.Minimize(min, bMin) : bMin.clone();
+          max = max ? BABYLON.Vector3.Maximize(max, bMax) : bMax.clone();
+
+          if (mesh.getTotalVertices() > 0) {
+            mesh.receiveShadows = true;
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+        if (min && max) {
+          modelMin = min;
+          modelMax = max;
+          modelCenter = min.add(max).scale(0.5);
+          modelSize = max.subtract(min).length() || 12;
+          camera.setTarget(modelCenter);
+          camera.radius = modelSize * 1.2;
+          camera.lowerRadiusLimit = modelSize * 0.1;
+          camera.upperRadiusLimit = modelSize * 4;
+          if (usingFallbackLight) {
+            modelLight.position = modelCenter.add(new BABYLON.Vector3(modelSize, modelSize * 2, -modelSize));
+          }
+        }
+
+        // A cage/canopy netting material ("Material") may have a texture
+        // with real alpha data, but Blender's glTF export defaults new
+        // materials to Blend Mode "Opaque", which drops alpha on export
+        // unless changed — so Babylon loads it fully opaque. Re-enabling
+        // alpha here recovers the transparency without re-exporting.
+        const cageMat = scene.getMaterialByName("Material");
+        if (cageMat && cageMat.albedoTexture) {
+          cageMat.albedoTexture.hasAlpha = true;
+          cageMat.useAlphaFromAlbedoTexture = true;
+          cageMat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+          cageMat.backFaceCulling = false;
+        }
+
+        viewControlsEl.classList.add("ready");
+        loadingEl.style.opacity = "0";
+        setTimeout(() => {
+          if (loadingEl.style.opacity === "0") loadingEl.style.display = "none";
+        }, 400);
+      });
+    }
+
+    // ---- Routing: hash selects the project, defaults to the first one ----
+    function selectProject(id, { pushHistory = true } = {}) {
+      const project = PROJECTS.find((p) => p.id === id) || PROJECTS[0];
+      if (pushHistory && location.hash.slice(1) !== project.id) {
+        history.pushState(null, "", "#" + project.id);
+      }
+      renderProjectList(project.id);
+      loadProject(project);
+    }
+    window.addEventListener("popstate", () => {
+      selectProject(location.hash.slice(1), { pushHistory: false });
+    });
+    selectProject(location.hash.slice(1), { pushHistory: false });
+
+    engine.runRenderLoop(() => {
+      if (scene) scene.render();
+    });
+    window.addEventListener("resize", () => {
+      engine.resize();
+    });
+  </script>
 </body>
 </html>
