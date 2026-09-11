@@ -312,6 +312,10 @@
       color: #12141c;
       border-color: #eaf2ff;
     }
+    .viewBtn[hidden],
+    .divider[hidden] {
+      display: none;
+    }
 
     @media (max-width: 480px) {
       #hint {
@@ -389,6 +393,14 @@
           </svg>
           <span>60&deg;</span>
         </button>
+        <div class="divider" id="doorDivider" hidden></div>
+        <button class="viewBtn iconOnly" id="btnToggleDoor" type="button" title="Toggle cabinet door" aria-label="Toggle cabinet door" hidden>
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+            <rect x="4" y="2.5" width="12" height="15" rx="1" />
+            <line x1="10" y1="2.5" x2="10" y2="17.5" stroke-width="1.1" />
+            <circle cx="7.7" cy="10" r="0.75" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
       </div>
     </div>
   </main>
@@ -402,20 +414,23 @@
     // projects here — no other code needs to change.
     const PROJECTS = [
       {
-        id: "cove",
-        tag: "Scene 01",
-        title: "Cove Event Floor Plan",
-        context: "National Teacher's Day · Cove Garden",
-        rootUrl: "projects/store/",
-        fileName: "cove-floorplan.glb",
-      },
-      {
         id: "lenovo",
-        tag: "Scene 02",
+        tag: "Scene 01",
         title: "Lenovo Event",
         context: "Placeholder model — to be replaced",
         rootUrl: "projects/lenovo-event/",
         fileName: "lenovo-floorplan.glb",
+      },
+      {
+        id: "server-cabinet",
+        tag: "Scene 02",
+        title: "Server Cabinet",
+        context: "Rack cabinet — try the door button below",
+        rootUrl: "projects/server-cabinet/",
+        fileName: "server-cabinet.glb",
+        // This model's embedded animation would otherwise fight the
+        // manually-driven door bone every frame — see below.
+        stopEmbeddedAnimation: true,
       },
     ];
 
@@ -439,6 +454,41 @@
     let camera = null;
     let modelMin = null, modelMax = null, modelCenter = BABYLON.Vector3.Zero(), modelSize = 12;
     let userInteracted = false;
+
+    // ---- Cabinet door toggle (model-specific: only shown when the loaded
+    // model has a skeleton bone named "bone1") ----
+    const btnToggleDoorEl = document.getElementById("btnToggleDoor");
+    const doorDividerEl = document.getElementById("doorDivider");
+    const DOOR_CLOSED = BABYLON.Quaternion.Identity();
+    const DOOR_OPEN = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), BABYLON.Tools.ToRadians(128));
+    let cabinetDoorNode = null;
+    let cabinetDoorOpen = false;
+
+    function animateRotationQuaternion(node, toQuaternion, durationMs) {
+      const fps = 30;
+      const ease = new BABYLON.QuadraticEase();
+      ease.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+      BABYLON.Animation.CreateAndStartAnimation(
+        "doorToggle",
+        node,
+        "rotationQuaternion",
+        fps,
+        Math.round((durationMs / 1000) * fps),
+        node.rotationQuaternion ? node.rotationQuaternion.clone() : BABYLON.Quaternion.Identity(),
+        toQuaternion,
+        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
+        ease
+      );
+    }
+
+    btnToggleDoorEl.addEventListener("click", () => {
+      if (!cabinetDoorNode) return;
+      userInteracted = true;
+      cabinetDoorOpen = !cabinetDoorOpen;
+      animateRotationQuaternion(cabinetDoorNode, cabinetDoorOpen ? DOOR_OPEN : DOOR_CLOSED, 500);
+      btnToggleDoorEl.classList.toggle("active", cabinetDoorOpen);
+      btnToggleDoorEl.title = cabinetDoorOpen ? "Close cabinet door" : "Open cabinet door";
+    });
 
     // Camera angle presets. Alpha is the horizontal (azimuth) rotation; beta
     // is measured from straight-down (0deg = top-down, 90deg = horizon-level),
@@ -560,6 +610,12 @@
       modelCenter = BABYLON.Vector3.Zero();
       modelSize = 12;
       userInteracted = false;
+      cabinetDoorNode = null;
+      cabinetDoorOpen = false;
+      btnToggleDoorEl.hidden = true;
+      doorDividerEl.hidden = true;
+      btnToggleDoorEl.classList.remove("active");
+      btnToggleDoorEl.title = "Open cabinet door";
 
       // Idle auto-rotate the camera slowly until the user interacts
       scene.onBeforeRenderObservable.add(() => {
@@ -569,6 +625,24 @@
       });
 
       BABYLON.SceneLoader.ImportMeshAsync("", project.rootUrl, project.fileName, scene).then((result) => {
+        // Babylon doesn't auto-play a model's embedded animation on import
+        // via ImportMeshAsync — it just sits there loaded but static unless
+        // something starts it. Most models (e.g. Lenovo's humanoid) want it
+        // playing on a loop; server-cabinet instead wants full manual
+        // control of one bone, and a playing animation would fight that
+        // bone's rotation every frame, so it opts out via
+        // stopEmbeddedAnimation. (Belt-and-suspenders: neither
+        // AnimationGroup.stop()/.dispose() nor scene.stopAllAnimations()
+        // actually stops its underlying per-node Animatables in this
+        // Babylon version if one somehow started — stopping each Animatable
+        // directly is what actually works.)
+        if (project.stopEmbeddedAnimation) {
+          scene.animatables.slice().forEach((a) => a.stop());
+          result.animationGroups.forEach((ag) => ag.dispose());
+        } else {
+          result.animationGroups.forEach((ag) => ag.play(true));
+        }
+
         // Prefer the glTF's own "Light" node if this model has one
         // (position/direction authored in Blender) — matches the setup
         // tuned in the Babylon Inspector rather than a light we position
@@ -629,9 +703,28 @@
           camera.radius = modelSize * 1.2;
           camera.lowerRadiusLimit = modelSize * 0.1;
           camera.upperRadiusLimit = modelSize * 4;
+          // Babylon's default wheelPrecision (3) is an absolute step size,
+          // not scaled to the model — it feels fine on a ~30-unit floor
+          // plan but far too fast on a ~8-unit cabinet. Scaling it inversely
+          // with modelSize keeps zoom speed feeling consistent across very
+          // differently-sized models (84 is calibrated so a ~28-unit model,
+          // like the Cove floor plan was, lands close to the default 3).
+          camera.wheelPrecision = Math.max(3, 84 / modelSize);
           if (usingFallbackLight) {
             modelLight.position = modelCenter.add(new BABYLON.Vector3(modelSize, modelSize * 2, -modelSize));
           }
+        }
+
+        // If this model has a skeleton with a bone named "bone1" (e.g. the
+        // server cabinet's door hinge), show the door-toggle button and wire
+        // it to that bone's linked transform node.
+        result.skeletons.forEach((sk) => {
+          const bone1 = sk.bones.find((b) => b.name === "bone1");
+          if (bone1) cabinetDoorNode = bone1.getTransformNode() || bone1;
+        });
+        if (cabinetDoorNode) {
+          btnToggleDoorEl.hidden = false;
+          doorDividerEl.hidden = false;
         }
 
         // A cage/canopy netting material ("Material") may have a texture

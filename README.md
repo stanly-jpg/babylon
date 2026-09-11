@@ -7,13 +7,13 @@ A single-page Babylon.js viewer with a project sidebar. No build step — Babylo
 ```
 index.html                          the entire app: sidebar, viewer, all camera/light/UI code
 projects/
-  store/cove-floorplan.glb           "Cove Event Floor Plan" model (~35MB)
-  lenovo-event/lenovo-floorplan.glb  "Lenovo Event" model (placeholder, to be replaced)
+  lenovo-event/lenovo-floorplan.glb  "Lenovo Event" model (placeholder, to be replaced) — humanoid walk animation
+  server-cabinet/server-cabinet.glb  "Server Cabinet" model, with an openable door
 ```
 
-There's only one HTML page. The `PROJECTS` array near the top of `index.html`'s `<script>` lists each project (id, title, context line, and where its `.glb` lives); the sidebar is rendered from that array, and picking one loads its model into the same Babylon scene. The `projects/<name>/` folders now hold nothing but the model file — the per-project `index.html` pages that used to live there are gone.
+There's only one HTML page. The `PROJECTS` array near the top of `index.html`'s `<script>` lists each project (id, title, context line, and where its `.glb` lives); the sidebar is rendered from that array, and picking one loads its model into the same Babylon scene. The `projects/<name>/` folders hold nothing but the model file — there are no per-project `index.html` pages.
 
-Opening the site with no `#hash` loads `PROJECTS[0]` (currently Cove). Each project also gets its own URL — `/#cove`, `/#lenovo` — so links to a specific project are shareable and survive a refresh; the back/forward buttons work too.
+Opening the site with no `#hash` loads `PROJECTS[0]` (currently Lenovo). Each project also gets its own URL — `/#lenovo`, `/#server-cabinet` — so links to a specific project are shareable and survive a refresh; the back/forward buttons work too.
 
 ## Adding a new project
 
@@ -26,6 +26,16 @@ Opening the site with no `#hash` loads `PROJECTS[0]` (currently Cove). Each proj
 3. That's it — the sidebar entry, routing, camera framing, shadows, and lighting are all generic and driven by this array.
 
 If the model has its own light node named `"Light"` (e.g. exported from Blender with a Sun), the viewer uses it for shadows automatically (including compensating for a case where the light's rotation lives on a parent node rather than the light itself). Otherwise it falls back to a generic directional light positioned above the model.
+
+Babylon's `SceneLoader.ImportMeshAsync` doesn't auto-play a model's embedded animation — by default the viewer starts it looped (`animationGroup.play(true)`) once loaded, which is what gives Lenovo's humanoid its walk cycle. A project can instead set `stopEmbeddedAnimation: true` (see server-cabinet) to keep a model static — needed when something else needs full manual control of a bone the embedded animation would otherwise also drive. `AnimationGroup.stop()`/`.dispose()` and `scene.stopAllAnimations()` do *not* reliably stop its underlying per-node Animatables in the Babylon version this project pins — stopping each one directly (`scene.animatables.slice().forEach(a => a.stop())`) is what actually works.
+
+### Server Cabinet's door button
+
+`server-cabinet.glb` has a skeleton with a bone named `"bone1"` — the door hinge. On load, the viewer searches every loaded model's skeletons for that bone name; if found, it shows the door-toggle button (hidden otherwise, e.g. for Lenovo) and animates that bone's linked transform node's `rotationQuaternion` between identity and a 128° rotation around the Y axis. To give another project the same button, its skeleton just needs a bone named `"bone1"` — no other code changes needed.
+
+### Per-model zoom speed
+
+Babylon's default `wheelPrecision` (3) is an absolute step size, not scaled to the model — it felt right on the ~28-unit Cove floor plan but much too fast on the ~8-unit server cabinet. After framing the camera, the viewer sets `camera.wheelPrecision = Math.max(3, 84 / modelSize)`, so smaller models automatically get a slower, finer scroll-zoom without needing a per-project setting.
 
 ## Camera controls
 
