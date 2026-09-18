@@ -37,6 +37,10 @@ Babylon's `SceneLoader.ImportMeshAsync` doesn't auto-play a model's embedded ani
 
 Babylon's default `wheelPrecision` (3) is an absolute step size, not scaled to the model — it felt right on the ~28-unit Cove floor plan but much too fast on the ~8-unit server cabinet. After framing the camera, the viewer sets `camera.wheelPrecision = Math.max(3, 84 / modelSize)`, so smaller models automatically get a slower, finer scroll-zoom without needing a per-project setting.
 
+### Collections panel
+
+If a model has top-level Blender Collections — each with all its objects parented under an Empty named after the collection, then exported to glTF — the viewer shows a "Collections" box (top-right) with a checkbox per group to toggle that whole group's visibility (`node.setEnabled(...)`, which cascades to every descendant). Detection is automatic and generic: any node parented directly at the scene root, with no geometry of its own and at least one child, counts as a group — except a multi-material mesh's `"<name>_primitiveN"` wrapper node and an Armature object (Babylon's glTF loader treats the armature itself as the skeleton's first bone, not a collection). No per-project code or config is needed; a project with no such groups just never shows the panel.
+
 ## Camera controls
 
 Plain Babylon.js defaults (same as the [Babylon.js Sandbox](https://sandbox.babylonjs.com/)) — no custom overrides:

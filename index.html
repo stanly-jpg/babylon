@@ -317,6 +317,59 @@
       display: none;
     }
 
+    /* ---- Collections panel ---- */
+    #collectionsPanel {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 6;
+      width: 180px;
+      max-height: calc(100% - 100px);
+      overflow-y: auto;
+      border-radius: 14px;
+      background: rgba(20, 24, 36, 0.7);
+      border: 1px solid rgba(234, 242, 255, 0.2);
+      backdrop-filter: blur(6px);
+    }
+    #collectionsPanel[hidden] {
+      display: none;
+    }
+    #collectionsPanel .panelHeader {
+      padding: 10px 14px 6px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #9fb3ff;
+    }
+    #collectionsList {
+      display: flex;
+      flex-direction: column;
+      padding: 2px 6px 8px;
+    }
+    .collectionRow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #eaf2ff;
+      cursor: pointer;
+    }
+    .collectionRow:hover {
+      background: rgba(234, 242, 255, 0.08);
+    }
+    .collectionRow input {
+      flex: 0 0 auto;
+      accent-color: #9fb3ff;
+      cursor: pointer;
+    }
+    .collectionRow span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     @media (max-width: 480px) {
       #hint {
         display: none;
@@ -357,6 +410,11 @@
       <canvas id="renderCanvas"></canvas>
       <div id="loading">Loading&hellip;</div>
       <p id="hint">Left-drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
+
+      <div id="collectionsPanel" hidden>
+        <div class="panelHeader">Collections</div>
+        <div id="collectionsList"></div>
+      </div>
 
       <div id="viewControls">
         <button class="viewBtn iconOnly" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
@@ -490,6 +548,68 @@
       btnToggleDoorEl.title = cabinetDoorOpen ? "Close cabinet door" : "Open cabinet door";
     });
 
+    // ---- Collections panel (model-specific: only shown when the loaded
+    // model has top-level "group" nodes — i.e. Blender Empties that objects
+    // were parented to before export, one per Collection) ----
+    const collectionsPanelEl = document.getElementById("collectionsPanel");
+    const collectionsListEl = document.getElementById("collectionsList");
+
+    function escapeRegExp(s) {
+      return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    // A real collection group is a node with no geometry of its own whose
+    // children are distinct objects — as opposed to (a) a multi-material
+    // mesh, which the glTF loader also splits into a geometry-less parent
+    // node plus per-material "<name>_primitiveN" child meshes, or (b) an
+    // Armature: Babylon's glTF loader treats the armature object itself as
+    // the skeleton's first "bone", not a Collection group.
+    function findCollectionGroups(scene, rootNode) {
+      const skeletonNodes = new Set();
+      scene.skeletons.forEach((sk) => {
+        sk.bones.forEach((b) => {
+          const n = b.getTransformNode();
+          if (n) skeletonNodes.add(n);
+        });
+      });
+
+      const candidates = [...scene.meshes, ...scene.transformNodes];
+      return candidates
+        .filter((node) => {
+          if (node.parent !== rootNode) return false;
+          if (skeletonNodes.has(node)) return false;
+          if (node.getTotalVertices && node.getTotalVertices() > 0) return false;
+          const children = node.getChildren();
+          if (!children.length) return false;
+          const primitivePattern = new RegExp(`^${escapeRegExp(node.name)}_primitive\\d+$`);
+          return !children.every((c) => primitivePattern.test(c.name));
+        })
+        .map((node) => ({ name: node.name, node }));
+    }
+
+    function renderCollectionsPanel(groups) {
+      collectionsListEl.innerHTML = "";
+      collectionsPanelEl.hidden = groups.length === 0;
+      groups.forEach((group) => {
+        const row = document.createElement("label");
+        row.className = "collectionRow";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = group.node.isEnabled(false);
+        checkbox.addEventListener("change", () => {
+          group.node.setEnabled(checkbox.checked);
+        });
+
+        const label = document.createElement("span");
+        label.textContent = group.name;
+
+        row.appendChild(checkbox);
+        row.appendChild(label);
+        collectionsListEl.appendChild(row);
+      });
+    }
+
     // Camera angle presets. Alpha is the horizontal (azimuth) rotation; beta
     // is measured from straight-down (0deg = top-down, 90deg = horizon-level),
     // matching Babylon's ArcRotateCamera convention.
@@ -616,6 +736,8 @@
       doorDividerEl.hidden = true;
       btnToggleDoorEl.classList.remove("active");
       btnToggleDoorEl.title = "Open cabinet door";
+      collectionsListEl.innerHTML = "";
+      collectionsPanelEl.hidden = true;
 
       // Idle auto-rotate the camera slowly until the user interacts
       scene.onBeforeRenderObservable.add(() => {
@@ -725,6 +847,13 @@
         if (cabinetDoorNode) {
           btnToggleDoorEl.hidden = false;
           doorDividerEl.hidden = false;
+        }
+
+        // If the model has top-level Blender-Collection group nodes, show
+        // a panel to toggle each one's visibility.
+        const importRoot = result.meshes.find((m) => m.name === "__root__");
+        if (importRoot) {
+          renderCollectionsPanel(findCollectionGroups(scene, importRoot));
         }
 
         // A cage/canopy netting material ("Material") may have a texture
