@@ -316,32 +316,45 @@
     .divider[hidden] {
       display: none;
     }
+    .viewBtn svg[hidden] {
+      display: none;
+    }
 
-    /* ---- Collections panel ---- */
-    #collectionsPanel {
+    /* ---- Right-side panels (Collections, Animations) ---- */
+    #rightPanels {
       position: absolute;
       top: 16px;
       right: 16px;
       z-index: 6;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
       width: 180px;
       max-height: calc(100% - 100px);
+    }
+    #collectionsPanel,
+    #animationsPanel {
+      flex: 0 1 auto;
+      min-height: 0;
       overflow-y: auto;
       border-radius: 14px;
       background: rgba(20, 24, 36, 0.7);
       border: 1px solid rgba(234, 242, 255, 0.2);
       backdrop-filter: blur(6px);
     }
-    #collectionsPanel[hidden] {
+    #collectionsPanel[hidden],
+    #animationsPanel[hidden] {
       display: none;
     }
-    #collectionsPanel .panelHeader {
+    .panelHeader {
       padding: 10px 14px 6px;
       font-size: 10px;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #9fb3ff;
     }
-    #collectionsList {
+    #collectionsList,
+    #animationsList {
       display: flex;
       flex-direction: column;
       padding: 2px 6px 8px;
@@ -411,29 +424,38 @@
       <div id="loading">Loading&hellip;</div>
       <p id="hint">Left-drag to orbit &middot; scroll to zoom &middot; right-drag to pan</p>
 
-      <div id="collectionsPanel" hidden>
-        <div class="panelHeader">Collections</div>
-        <div id="collectionsList"></div>
+      <div id="rightPanels">
+        <div id="collectionsPanel" hidden>
+          <div class="panelHeader">Collections</div>
+          <div id="collectionsList"></div>
+        </div>
+        <div id="animationsPanel" hidden>
+          <div class="panelHeader">Animations</div>
+          <div id="animationsList"></div>
+        </div>
       </div>
 
       <div id="viewControls">
-        <button class="viewBtn iconOnly" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
+        <button class="viewBtn" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <path d="M10 3v9" />
             <path d="M6.5 9L10 12.5L13.5 9" />
             <path d="M4 15.5h12" />
           </svg>
+          <span>Save</span>
         </button>
         <div class="divider"></div>
-        <button class="viewBtn iconOnly" data-view="topVertical" type="button" title="Top view (fills vertically)" aria-label="Top view, vertical fill">
+        <button class="viewBtn" data-view="topVertical" type="button" title="Top view (fills vertically)" aria-label="Top view, vertical fill">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
             <rect x="6" y="2.5" width="8" height="15" rx="1.2" />
           </svg>
+          <span>Portrait</span>
         </button>
-        <button class="viewBtn iconOnly" data-view="topHorizontal" type="button" title="Top view (fills horizontally)" aria-label="Top view, horizontal fill">
+        <button class="viewBtn" data-view="topHorizontal" type="button" title="Top view (fills horizontally)" aria-label="Top view, horizontal fill">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
             <rect x="2.5" y="6" width="15" height="8" rx="1.2" />
           </svg>
+          <span>Landscape</span>
         </button>
         <button class="viewBtn" data-view="diorama30" type="button" title="Diorama view, 30&deg;" aria-label="Diorama view, 30 degrees">
           <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
@@ -452,19 +474,23 @@
           <span>60&deg;</span>
         </button>
         <div class="divider"></div>
-        <button class="viewBtn iconOnly" id="btnToggleShadows" type="button" title="Turn shadows off" aria-label="Toggle shadows">
+        <button class="viewBtn" id="btnToggleShadows" type="button" title="Turn shadows off" aria-label="Toggle shadows">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="10" cy="7.5" r="3" />
             <ellipse cx="10" cy="16" rx="6" ry="1.5" fill="currentColor" stroke="none" opacity="0.55" />
           </svg>
+          <span>Shadows</span>
         </button>
-        <div class="divider" id="doorDivider" hidden></div>
-        <button class="viewBtn iconOnly" id="btnToggleDoor" type="button" title="Toggle cabinet door" aria-label="Toggle cabinet door" hidden>
-          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
-            <rect x="4" y="2.5" width="12" height="15" rx="1" />
-            <line x1="10" y1="2.5" x2="10" y2="17.5" stroke-width="1.1" />
-            <circle cx="7.7" cy="10" r="0.75" fill="currentColor" stroke="none" />
+        <div class="divider"></div>
+        <button class="viewBtn" id="btnOrbit" type="button" title="Stop camera orbit" aria-label="Toggle camera orbit">
+          <svg class="icon-pause" viewBox="0 0 20 20" width="18" height="18" fill="currentColor" stroke="none">
+            <rect x="6" y="4" width="3" height="12" rx="1" />
+            <rect x="11" y="4" width="3" height="12" rx="1" />
           </svg>
+          <svg class="icon-play" style="display: none" viewBox="0 0 20 20" width="18" height="18" fill="currentColor" stroke="none">
+            <path d="M6.5 4.5L15 10L6.5 15.5Z" />
+          </svg>
+          <span>Orbit</span>
         </button>
       </div>
     </div>
@@ -490,11 +516,12 @@
         id: "server-cabinet",
         tag: "Scene 02",
         title: "Server Cabinet",
-        context: "Rack cabinet — try the door button below",
+        context: "Rack cabinet — try the door toggle in the Animations panel",
         rootUrl: "projects/server-cabinet/",
         fileName: "server-cabinet.glb",
-        // This model's embedded animation would otherwise fight the
-        // manually-driven door bone every frame — see below.
+        // This model's own embedded animation would otherwise fight the
+        // manually-driven door bone every frame if both played at once, so
+        // it defaults to off in the Animations panel — see below.
         stopEmbeddedAnimation: true,
       },
     ];
@@ -519,14 +546,14 @@
     let camera = null;
     let modelMin = null, modelMax = null, modelCenter = BABYLON.Vector3.Zero(), modelSize = 12;
     let userInteracted = false;
+    let orbitEnabled = true;
     let shadowGenerator = null;
     let shadowCasterMeshes = [];
     let shadowsOn = true;
 
-    // ---- Cabinet door toggle (model-specific: only shown when the loaded
-    // model has a skeleton bone named "bone1") ----
-    const btnToggleDoorEl = document.getElementById("btnToggleDoor");
-    const doorDividerEl = document.getElementById("doorDivider");
+    // ---- Cabinet door toggle (model-specific: driven by the Animations
+    // panel below, only listed when the loaded model has a skeleton bone
+    // named "bone1") ----
     const DOOR_CLOSED = BABYLON.Quaternion.Identity();
     const DOOR_OPEN = BABYLON.Quaternion.RotationAxis(BABYLON.Vector3.Up(), BABYLON.Tools.ToRadians(128));
     let cabinetDoorNode = null;
@@ -549,13 +576,26 @@
       );
     }
 
-    btnToggleDoorEl.addEventListener("click", () => {
-      if (!cabinetDoorNode) return;
-      userInteracted = true;
-      cabinetDoorOpen = !cabinetDoorOpen;
-      animateRotationQuaternion(cabinetDoorNode, cabinetDoorOpen ? DOOR_OPEN : DOOR_CLOSED, 500);
-      btnToggleDoorEl.classList.toggle("active", cabinetDoorOpen);
-      btnToggleDoorEl.title = cabinetDoorOpen ? "Close cabinet door" : "Open cabinet door";
+    // ---- Camera orbit play/pause (scene-wide: works the same for every
+    // project). Independent of the "stop idle-spin on first interaction"
+    // behavior below — pressing Play always resumes it, even after the user
+    // has clicked a view-preset button. ----
+    const btnOrbitEl = document.getElementById("btnOrbit");
+    const orbitPauseIconEl = btnOrbitEl.querySelector(".icon-pause");
+    const orbitPlayIconEl = btnOrbitEl.querySelector(".icon-play");
+    function updateOrbitButtonUI() {
+      // SVG elements don't reliably reflect the `hidden` IDL property to
+      // the content attribute the way HTML elements do, so [hidden] CSS
+      // never matched here — toggle display directly instead.
+      orbitPauseIconEl.style.display = orbitEnabled ? "" : "none";
+      orbitPlayIconEl.style.display = orbitEnabled ? "none" : "";
+      btnOrbitEl.classList.toggle("active", !orbitEnabled);
+      btnOrbitEl.title = orbitEnabled ? "Stop camera orbit" : "Play camera orbit";
+    }
+    btnOrbitEl.addEventListener("click", () => {
+      orbitEnabled = !orbitEnabled;
+      if (orbitEnabled) userInteracted = false;
+      updateOrbitButtonUI();
     });
 
     // ---- Shadow toggle (scene-wide: works the same for every project) ----
@@ -631,6 +671,45 @@
         row.appendChild(checkbox);
         row.appendChild(label);
         collectionsListEl.appendChild(row);
+      });
+    }
+
+    // ---- Animations panel (generic: one toggle row per animation-like
+    // "state" the loaded model has — an embedded glTF AnimationGroup, or a
+    // custom scripted toggle like the cabinet door. Each item just needs a
+    // name, an initial checked state, and an onToggle(checked) callback.) ----
+    const animationsPanelEl = document.getElementById("animationsPanel");
+    const animationsListEl = document.getElementById("animationsList");
+
+    function renderAnimationsPanel(items) {
+      animationsListEl.innerHTML = "";
+      animationsPanelEl.hidden = items.length === 0;
+      items.forEach((item) => {
+        const row = document.createElement("label");
+        row.className = "collectionRow";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = item.checked;
+        checkbox.addEventListener("change", () => item.onToggle(checkbox.checked));
+
+        const label = document.createElement("span");
+        label.textContent = item.name;
+
+        row.appendChild(checkbox);
+        row.appendChild(label);
+        animationsListEl.appendChild(row);
+      });
+    }
+
+    // Fully stops (not just pauses) every Animatable driving an animation
+    // group's targets — belt-and-suspenders, since AnimationGroup.stop()
+    // alone doesn't reliably stop its underlying per-node Animatables in
+    // this Babylon version (see the embedded-animation handling below).
+    function stopAnimationGroupFully(scene, ag) {
+      ag.stop();
+      ag.targetedAnimations.forEach((ta) => {
+        scene.getAllAnimatablesByTarget(ta.target).forEach((a) => a.stop());
       });
     }
 
@@ -753,45 +832,57 @@
       modelCenter = BABYLON.Vector3.Zero();
       modelSize = 12;
       userInteracted = false;
+      orbitEnabled = true;
+      updateOrbitButtonUI();
       cabinetDoorNode = null;
       cabinetDoorOpen = false;
-      btnToggleDoorEl.hidden = true;
-      doorDividerEl.hidden = true;
-      btnToggleDoorEl.classList.remove("active");
-      btnToggleDoorEl.title = "Open cabinet door";
       collectionsListEl.innerHTML = "";
       collectionsPanelEl.hidden = true;
+      animationsListEl.innerHTML = "";
+      animationsPanelEl.hidden = true;
       shadowGenerator = null;
       shadowCasterMeshes = [];
       shadowsOn = true;
       btnToggleShadowsEl.classList.remove("active");
       btnToggleShadowsEl.title = "Turn shadows off";
 
-      // Idle auto-rotate the camera slowly until the user interacts
+      // Idle auto-rotate the camera slowly until the user interacts (or
+      // pauses it explicitly via the Orbit button)
       scene.onBeforeRenderObservable.add(() => {
-        if (!userInteracted) {
+        if (orbitEnabled && !userInteracted) {
           camera.alpha += engine.getDeltaTime() * 0.00008;
         }
       });
 
       BABYLON.SceneLoader.ImportMeshAsync("", project.rootUrl, project.fileName, scene).then((result) => {
+        // Every animation-like "state" this model offers gets one row in
+        // the Animations panel — built up as we detect each kind below.
+        const animationItems = [];
+
         // Babylon doesn't auto-play a model's embedded animation on import
         // via ImportMeshAsync — it just sits there loaded but static unless
-        // something starts it. Most models (e.g. Lenovo's humanoid) want it
-        // playing on a loop; server-cabinet instead wants full manual
-        // control of one bone, and a playing animation would fight that
-        // bone's rotation every frame, so it opts out via
-        // stopEmbeddedAnimation. (Belt-and-suspenders: neither
-        // AnimationGroup.stop()/.dispose() nor scene.stopAllAnimations()
-        // actually stops its underlying per-node Animatables in this
-        // Babylon version if one somehow started — stopping each Animatable
-        // directly is what actually works.)
-        if (project.stopEmbeddedAnimation) {
-          scene.animatables.slice().forEach((a) => a.stop());
-          result.animationGroups.forEach((ag) => ag.dispose());
-        } else {
-          result.animationGroups.forEach((ag) => ag.play(true));
-        }
+        // something starts it. Most models (e.g. Lenovo's humanoid) default
+        // to on; server-cabinet's default to off since it also drives the
+        // door bone the "Cabinet Door" toggle below controls manually, and a
+        // playing animation would fight that every frame if both ran at
+        // once — but the user can still switch it on from the panel.
+        result.animationGroups.forEach((ag) => {
+          const startEnabled = !project.stopEmbeddedAnimation;
+          if (startEnabled) ag.play(true);
+          else stopAnimationGroupFully(scene, ag);
+          animationItems.push({
+            name: ag.name || "Animation",
+            checked: startEnabled,
+            onToggle: (checked) => {
+              if (checked) {
+                stopAnimationGroupFully(scene, ag);
+                ag.play(true);
+              } else {
+                stopAnimationGroupFully(scene, ag);
+              }
+            },
+          });
+        });
 
         // Prefer the glTF's own "Light" node if this model has one
         // (position/direction authored in Blender) — matches the setup
@@ -867,16 +958,24 @@
         }
 
         // If this model has a skeleton with a bone named "bone1" (e.g. the
-        // server cabinet's door hinge), show the door-toggle button and wire
-        // it to that bone's linked transform node.
+        // server cabinet's door hinge), add a door toggle to the Animations
+        // panel, wired to that bone's linked transform node.
         result.skeletons.forEach((sk) => {
           const bone1 = sk.bones.find((b) => b.name === "bone1");
           if (bone1) cabinetDoorNode = bone1.getTransformNode() || bone1;
         });
         if (cabinetDoorNode) {
-          btnToggleDoorEl.hidden = false;
-          doorDividerEl.hidden = false;
+          animationItems.push({
+            name: "Cabinet Door",
+            checked: cabinetDoorOpen,
+            onToggle: (checked) => {
+              userInteracted = true;
+              cabinetDoorOpen = checked;
+              animateRotationQuaternion(cabinetDoorNode, cabinetDoorOpen ? DOOR_OPEN : DOOR_CLOSED, 500);
+            },
+          });
         }
+        renderAnimationsPanel(animationItems);
 
         // If the model has top-level Blender-Collection group nodes, show
         // a panel to toggle each one's visibility.

@@ -27,23 +27,20 @@ Opening the site with no `#hash` loads `PROJECTS[0]` (currently Lenovo). Each pr
 
 If the model has its own light node named `"Light"` (e.g. exported from Blender with a Sun), the viewer uses it for shadows automatically (including compensating for a case where the light's rotation lives on a parent node rather than the light itself). Otherwise it falls back to a generic directional light positioned above the model.
 
-Babylon's `SceneLoader.ImportMeshAsync` doesn't auto-play a model's embedded animation — by default the viewer starts it looped (`animationGroup.play(true)`) once loaded, which is what gives Lenovo's humanoid its walk cycle. A project can instead set `stopEmbeddedAnimation: true` (see server-cabinet) to keep a model static — needed when something else needs full manual control of a bone the embedded animation would otherwise also drive. `AnimationGroup.stop()`/`.dispose()` and `scene.stopAllAnimations()` do *not* reliably stop its underlying per-node Animatables in the Babylon version this project pins — stopping each one directly (`scene.animatables.slice().forEach(a => a.stop())`) is what actually works.
+### Footer buttons
 
-### Server Cabinet's door button
+The bottom bar is the same fixed set of buttons for every project — Save, Portrait, Landscape, 30°, 60°, Shadows, Orbit — each icon paired with a short label. Nothing in this bar is model-specific; anything that only applies to some models (the collections panel, animation/state toggles) lives in the right-side panels instead, described below. Portrait/Landscape/30°/60° only change the camera's angle (`alpha`/`beta`) — they leave `camera.radius` (zoom/distance) exactly as it was, so switching views never yanks the camera closer or farther from the model. Shadows calls `shadowGenerator.removeShadowCaster()`/`.addShadowCaster()` on every caster and toggles `receiveShadows`. Orbit plays/pauses the idle auto-rotate (see below) independently of whatever caused it to stop before — pressing it always resumes the spin, even after clicking a view-preset button.
 
-`server-cabinet.glb` has a skeleton with a bone named `"bone1"` — the door hinge. On load, the viewer searches every loaded model's skeletons for that bone name; if found, it shows the door-toggle button (hidden otherwise, e.g. for Lenovo) and animates that bone's linked transform node's `rotationQuaternion` between identity and a 128° rotation around the Y axis. To give another project the same button, its skeleton just needs a bone named `"bone1"` — no other code changes needed.
+### Right-side panels: Collections and Animations
+
+Two panels can appear top-right, each independent and only shown when the loaded model actually has something for it:
+
+- **Collections** — one checkbox per top-level Blender Collection (each with its objects parented under an Empty named after the collection, then exported to glTF). Detection is automatic and generic: any node parented directly at the scene root, with no geometry of its own and at least one child, counts as a group — except a multi-material mesh's `"<name>_primitiveN"` wrapper node and an Armature object (Babylon's glTF loader treats the armature itself as the skeleton's first bone, not a collection). Toggling calls `node.setEnabled(...)`, which cascades to every descendant.
+- **Animations** — one checkbox per animation-like "state" the model offers. Every embedded glTF `AnimationGroup` gets a row (named after the group, e.g. Lenovo's `"X.SHOPPING"` walk cycle) — checked plays it looped, unchecked stops it. A project can set `stopEmbeddedAnimation: true` (see server-cabinet) to default that row to off instead of on — used when the embedded animation would otherwise fight a custom scripted toggle over the same bone every frame. Server Cabinet also gets a **Cabinet Door** row: if the model has a skeleton bone named `"bone1"` (the door hinge), checking it animates that bone's linked transform node's `rotationQuaternion` to a 128° rotation around the Y axis; unchecking returns it to identity. `AnimationGroup.stop()` alone doesn't reliably stop its underlying per-node Animatables in the Babylon version this project pins — `stopAnimationGroupFully()` also stops every `Animatable` returned by `scene.getAllAnimatablesByTarget()` for that group's targets, which is what actually works.
 
 ### Per-model zoom speed
 
 Babylon's default `wheelPrecision` (3) is an absolute step size, not scaled to the model — it felt right on the ~28-unit Cove floor plan but much too fast on the ~8-unit server cabinet. After framing the camera, the viewer sets `camera.wheelPrecision = Math.max(3, 84 / modelSize)`, so smaller models automatically get a slower, finer scroll-zoom without needing a per-project setting.
-
-### Collections panel
-
-If a model has top-level Blender Collections — each with all its objects parented under an Empty named after the collection, then exported to glTF — the viewer shows a "Collections" box (top-right) with a checkbox per group to toggle that whole group's visibility (`node.setEnabled(...)`, which cascades to every descendant). Detection is automatic and generic: any node parented directly at the scene root, with no geometry of its own and at least one child, counts as a group — except a multi-material mesh's `"<name>_primitiveN"` wrapper node and an Armature object (Babylon's glTF loader treats the armature itself as the skeleton's first bone, not a collection). No per-project code or config is needed; a project with no such groups just never shows the panel.
-
-### Shadows toggle
-
-A sun-icon button (bottom bar) turns shadows on/off for every project. Turning them off calls `shadowGenerator.removeShadowCaster()` on every caster and sets `receiveShadows = false`; turning them back on re-adds each caster. There's no skybox — `createDefaultEnvironment` is still called with `createSkybox: false`, only for its default studio environment texture (PBR ambient/reflected light).
 
 ## Camera controls
 
@@ -53,7 +50,7 @@ Plain Babylon.js defaults (same as the [Babylon.js Sandbox](https://sandbox.baby
 - Scroll: zoom
 - Right-drag: pan
 
-The camera buttons (bottom of the viewer) are unaffected by this and still work as before: Download PNG (transparent background), Top (Vertical), Top (Horizontal), Diorama 30°, Diorama 60°. These only change the camera's angle (`alpha`/`beta`) — they leave `camera.radius` (zoom/distance) exactly as it was, so switching views never yanks the camera closer or farther from the model.
+The camera idles by slowly auto-rotating until the user interacts (drags, or clicks a view-preset button) or presses the Orbit footer button to pause it explicitly.
 
 ## Responsive layout
 
