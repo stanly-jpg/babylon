@@ -41,6 +41,10 @@ Babylon's default `wheelPrecision` (3) is an absolute step size, not scaled to t
 
 If a model has top-level Blender Collections — each with all its objects parented under an Empty named after the collection, then exported to glTF — the viewer shows a "Collections" box (top-right) with a checkbox per group to toggle that whole group's visibility (`node.setEnabled(...)`, which cascades to every descendant). Detection is automatic and generic: any node parented directly at the scene root, with no geometry of its own and at least one child, counts as a group — except a multi-material mesh's `"<name>_primitiveN"` wrapper node and an Armature object (Babylon's glTF loader treats the armature itself as the skeleton's first bone, not a collection). No per-project code or config is needed; a project with no such groups just never shows the panel.
 
+### Shadows toggle and skybox
+
+Every project gets a skybox now (`createDefaultEnvironment({ createSkybox: true, ... })`, using the same default studio environment texture that already lit PBR materials) plus a shadow on/off button (sun icon, bottom bar) and four sky-rotate buttons (left/right/up/down) next to it. Turning shadows off calls `shadowGenerator.removeShadowCaster()` on every caster and sets `receiveShadows = false`; turning them back on re-adds each caster. Rotating the sky spins the skybox mesh's own `rotation.x`/`.y` — its material samples the cubemap by vertex direction (`SKYBOX_MODE`), so rotating the mesh rotates what's visible without needing a special "rotate skybox" API. Horizontal rotation also spins `scene.environmentTexture.rotationY` so PBR reflections stay in sync with the visible sky; there's no equivalent axis for tilting reflections, so vertical rotation only affects the visible sky. The PNG-download handler hides the skybox for that one frame so exports keep a transparent background.
+
 ## Camera controls
 
 Plain Babylon.js defaults (same as the [Babylon.js Sandbox](https://sandbox.babylonjs.com/)) — no custom overrides:
