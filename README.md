@@ -5,15 +5,16 @@ A single-page Babylon.js viewer with a project sidebar. No build step — Babylo
 ## Structure
 
 ```
-index.html                          the entire app: sidebar, viewer, all camera/light/UI code
+index.html                                        the entire app: sidebar, viewer, all camera/light/UI code
 projects/
-  lenovo-event/lenovo-floorplan.glb  "Lenovo Event" model (placeholder, to be replaced) — humanoid walk animation
-  server-cabinet/server-cabinet.glb  "Server Cabinet" model, with an openable door
+  lenovo-event/lenovo-floorplan.glb                "Lenovo Event" model (placeholder, to be replaced) — humanoid walk animation
+  server-cabinet/server-cabinet.glb                "Server Cabinet" model, with an openable door
+  storm-location-plan/storm-location-plan.glb      "Storm Location Plan" model — site plan
 ```
 
 There's only one HTML page. The `PROJECTS` array near the top of `index.html`'s `<script>` lists each project (id, title, context line, and where its `.glb` lives); the sidebar is rendered from that array, and picking one loads its model into the same Babylon scene. The `projects/<name>/` folders hold nothing but the model file — there are no per-project `index.html` pages.
 
-Opening the site with no `#hash` loads `PROJECTS[0]` (currently Lenovo). Each project also gets its own URL — `/#lenovo`, `/#server-cabinet` — so links to a specific project are shareable and survive a refresh; the back/forward buttons work too.
+Opening the site with no `#hash` loads `PROJECTS[0]` (currently Lenovo). Each project also gets its own URL — `/#lenovo`, `/#server-cabinet`, `/#storm-location-plan` — so links to a specific project are shareable and survive a refresh; the back/forward buttons work too.
 
 ## Adding a new project
 
