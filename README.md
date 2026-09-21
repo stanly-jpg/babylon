@@ -38,7 +38,7 @@ Portrait/Landscape/30°/60° only change the camera's angle (`alpha`/`beta`) —
 
 ### Model scale
 
-`applyScale(factor)` sets `.scaling` on every top-level node the import produced (found generically as `[...result.meshes, ...result.transformNodes].filter(n => !n.parent)`, so it works regardless of whether the loader wrapped everything in a single `"__root__"` node or not) — since everything else (meshes, shadows, the door bone, collection groups) is a descendant, it scales right along with it. The camera's target and radius are left alone so the resize is visible in place; only `computeModelBounds()` and `applyZoomLimitsForModelSize()` re-run afterward, so the zoom range and scroll speed stay calibrated to the model's new size. Switching projects resets scale to 100%.
+`applyScale(factor)` sets `.scaling` on every top-level node the import produced (found generically as `[...result.meshes, ...result.transformNodes].filter(n => !n.parent)`, so it works regardless of whether the loader wrapped everything in a single `"__root__"` node or not) — since everything else (meshes, shadows, the door bone, collection groups) is a descendant, it scales right along with it. The camera's target and radius are left alone so the resize is visible in place; only `computeModelBounds()`, `applyZoomLimitsForModelSize()`, and `applyShadowRangeForModelSize()` re-run afterward, so zoom range, pan speed, and shadow tuning all stay calibrated to the model's new size (see "Per-model zoom, pan, and shadow tuning" below). Switching projects resets scale to 100%.
 
 ### Right-side panels: Collections and Animations
 
@@ -47,9 +47,17 @@ Two panels can appear top-right, each independent and only shown when the loaded
 - **Collections** — one checkbox per top-level Blender Collection (each with its objects parented under an Empty named after the collection, then exported to glTF). Detection is automatic and generic: any node parented directly at the scene root, with no geometry of its own and at least one child, counts as a group — except a multi-material mesh's `"<name>_primitiveN"` wrapper node and an Armature object (Babylon's glTF loader treats the armature itself as the skeleton's first bone, not a collection). Toggling calls `node.setEnabled(...)`, which cascades to every descendant.
 - **Animations** — one checkbox per animation-like "state" the model offers. Every embedded glTF `AnimationGroup` gets a row (named after the group, e.g. Lenovo's `"X.SHOPPING"` walk cycle) — checked plays it looped, unchecked stops it. A project can set `stopEmbeddedAnimation: true` (see server-cabinet) to default that row to off instead of on — used when the embedded animation would otherwise fight a custom scripted toggle over the same bone every frame. Server Cabinet also gets a **Cabinet Door** row: if the model has a skeleton bone named `"bone1"` (the door hinge), checking it animates that bone's linked transform node's `rotationQuaternion` to a 128° rotation around the Y axis; unchecking returns it to identity. `AnimationGroup.stop()` alone doesn't reliably stop its underlying per-node Animatables in the Babylon version this project pins — `stopAnimationGroupFully()` also stops every `Animatable` returned by `scene.getAllAnimatablesByTarget()` for that group's targets, which is what actually works.
 
-### Per-model zoom speed
+### Per-model zoom, pan, and shadow tuning
 
-Babylon's default `wheelPrecision` (3) is an absolute step size, not scaled to the model — it felt right on the ~28-unit Cove floor plan but much too fast on the ~8-unit server cabinet. After framing the camera, the viewer sets `camera.wheelPrecision = Math.max(3, 84 / modelSize)`, so smaller models automatically get a slower, finer scroll-zoom without needing a per-project setting.
+Several Babylon defaults are absolute values, not scaled to the model, so they can feel wrong at either end of the size range — fine on a ~28-unit floor plan but wrong on an ~8-unit cabinet or a real-world-scale (~100+ unit) site plan. `applyZoomLimitsForModelSize()` and `applyShadowRangeForModelSize()` (in `index.html`) recalculate all of these from `modelSize` right after the camera bounding box is known — on initial load, and again after a Scale dropdown change:
+
+- `camera.wheelPrecision = Math.max(3, 84 / modelSize)` — smaller models get a slower, finer scroll-zoom.
+- `camera.lowerRadiusLimit` / `upperRadiusLimit` — scale with `modelSize` so the zoom range stays sensible.
+- `camera.panningSensibility = Math.max(200, 28000 / modelSize)` — right-drag panning moves the camera target by a fixed number of world units per pixel by default, which barely dents a huge model (feels "very slow") and overshoots a tiny one. Floored so it can't get fast enough to feel twitchy.
+- `modelLight.shadowMaxZ = Math.max(1000, modelSize * 4)` — the old fixed 1000 could clip shadows for geometry beyond it on a large model.
+- `shadowGenerator.bias = 0.0001 * Math.max(1, modelSize / 28)` — a fixed bias becomes relatively too small for a large scene's depth range, causing shadow-acne-style artifacts.
+
+All five use the same ~28-unit reference point, so small/medium models land at (or very near) their original, already-tuned values — this is a no-op for Lenovo and only a minor adjustment for Server Cabinet, not a behavior change for existing projects.
 
 ## Camera controls
 

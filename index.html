@@ -639,6 +639,7 @@
     let modelMin = null, modelMax = null, modelCenter = BABYLON.Vector3.Zero(), modelSize = 12;
     let userInteracted = false;
     let orbitEnabled = true;
+    let modelLight = null;
     let shadowGenerator = null;
     let shadowCasterMeshes = [];
     let shadowsOn = true;
@@ -899,6 +900,30 @@
       camera.lowerRadiusLimit = modelSize * 0.1;
       camera.upperRadiusLimit = modelSize * 4;
       camera.wheelPrecision = Math.max(3, 84 / modelSize);
+      // Right-drag panning moves the camera target by a *fixed* number of
+      // world units per pixel (panningSensibility is the divisor — lower
+      // means faster), and Babylon doesn't scale that to content size on
+      // its own. On a real-world-scale model (e.g. a large site plan) that
+      // fixed rate barely dents it, which reads as "panning is very slow."
+      // Scaled inversely with modelSize using the same ~28-unit reference
+      // point as wheelPrecision above (so it lands close to Babylon's
+      // default of 1000 there); floored so it can't get so small that
+      // panning turns twitchy on extremely large models.
+      camera.panningSensibility = Math.max(200, 28000 / modelSize);
+    }
+
+    // The shadow map's depth range and bias are tuned for the ~10-30 unit
+    // models this app started with. On something much larger (e.g. a
+    // real-world-scale site plan), the old fixed shadowMaxZ could clip
+    // shadows for geometry beyond it, and the old fixed bias becomes
+    // relatively too small for the scene's depth range, both reading as
+    // "shadows look weird." Both scale from modelSize using the same
+    // ~28-unit reference point as wheelPrecision, so this is a no-op for
+    // the small/medium models it was already tuned for.
+    function applyShadowRangeForModelSize() {
+      if (!modelLight || !shadowGenerator) return;
+      modelLight.shadowMaxZ = Math.max(1000, modelSize * 4);
+      shadowGenerator.bias = 0.0001 * Math.max(1, modelSize / 28);
     }
 
     // ---- Model scale (Scale dropdown: 100% / 50% / 25%). Scales every
@@ -918,6 +943,7 @@
       scene.render(); // force world matrices to refresh before re-measuring
       if (computeModelBounds(modelMeshes)) {
         applyZoomLimitsForModelSize();
+        applyShadowRangeForModelSize();
       }
       document.querySelectorAll(".dropdownItem[data-scale]").forEach((btn) => {
         btn.classList.toggle("active", parseFloat(btn.dataset.scale) === factor);
@@ -1033,6 +1059,7 @@
       collectionsPanelEl.hidden = true;
       animationsListEl.innerHTML = "";
       animationsPanelEl.hidden = true;
+      modelLight = null;
       shadowGenerator = null;
       shadowCasterMeshes = [];
       shadowsOn = true;
@@ -1081,7 +1108,7 @@
         // (position/direction authored in Blender) — matches the setup
         // tuned in the Babylon Inspector rather than a light we position
         // ourselves. Falls back to a generic directional light otherwise.
-        let modelLight = scene.getLightByName("Light");
+        modelLight = scene.getLightByName("Light");
         let usingFallbackLight = false;
         if (modelLight) {
           // Babylon's DirectionalLight doesn't re-derive .direction from a
@@ -1103,10 +1130,10 @@
         modelLight.autoUpdateExtends = true;
         modelLight.autoCalcShadowZBounds = false;
         modelLight.shadowMinZ = 0;
-        modelLight.shadowMaxZ = 1000;
+        // shadowMaxZ and bias depend on modelSize — set below by
+        // applyShadowRangeForModelSize() once the bounding box is known.
 
         shadowGenerator = new BABYLON.ShadowGenerator(1024, modelLight);
-        shadowGenerator.bias = 0.0001;
         shadowGenerator.normalBias = 0;
         shadowGenerator.darkness = 0;
         // So transparent meshes (e.g. a cage's mesh netting) cast a shadow
@@ -1127,6 +1154,7 @@
           camera.setTarget(modelCenter);
           camera.radius = modelSize * 1.2;
           applyZoomLimitsForModelSize();
+          applyShadowRangeForModelSize();
           if (usingFallbackLight) {
             modelLight.position = modelCenter.add(new BABYLON.Vector3(modelSize, modelSize * 2, -modelSize));
           }
