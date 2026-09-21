@@ -320,13 +320,13 @@
       display: none;
     }
 
-    /* ---- Footer dropdown groups (Views, Scale). Positioned via JS
-       (left/bottom set at open-time from the trigger button's rect) rather
-       than CSS anchored to the trigger — #viewControls needs overflow-x:
-       auto for its horizontal button-scroll, which per the CSS overflow
-       spec forces overflow-y to clip too, so an absolutely-positioned
-       child anchored *inside* it gets cut off. These live as siblings of
-       #viewControls (direct children of #canvasWrap) instead. ---- */
+    /* ---- Footer dropdown groups (Views). Positioned via JS (left/bottom
+       set at open-time from the trigger button's rect) rather than CSS
+       anchored to the trigger — #viewControls needs overflow-x: auto for
+       its horizontal button-scroll, which per the CSS overflow spec forces
+       overflow-y to clip too, so an absolutely-positioned child anchored
+       *inside* it gets cut off. These live as siblings of #viewControls
+       (direct children of #canvasWrap) instead. ---- */
     .dropdownMenu {
       position: absolute;
       transform: translateX(-50%);
@@ -519,12 +519,6 @@
         </button>
       </div>
 
-      <div class="dropdownMenu" id="scaleMenu" hidden>
-        <button class="dropdownItem active" data-scale="1" type="button"><span>100%</span></button>
-        <button class="dropdownItem" data-scale="0.5" type="button"><span>50%</span></button>
-        <button class="dropdownItem" data-scale="0.25" type="button"><span>25%</span></button>
-      </div>
-
       <div id="viewControls">
         <button class="viewBtn" id="btnDownload" type="button" title="Download PNG" aria-label="Download PNG">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -543,18 +537,6 @@
             <path d="M3 6.5L10 10.5L17 6.5" />
           </svg>
           <span>Views</span>
-        </button>
-
-        <div class="divider"></div>
-
-        <button class="viewBtn" id="btnScaleTrigger" type="button" aria-haspopup="true" aria-expanded="false" title="Model scale" aria-label="Model scale">
-          <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 8V3h5" />
-            <path d="M17 12v5h-5" />
-            <path d="M3 3l6 6" />
-            <path d="M17 17l-6-6" />
-          </svg>
-          <span>Scale</span>
         </button>
 
         <div class="divider"></div>
@@ -831,15 +813,14 @@
       btn.addEventListener("click", () => setView(btn.dataset.view));
     });
 
-    // ---- Footer dropdown groups (Views, Scale): each is a trigger button
-    // paired with a popover menu of .dropdownItem buttons. The menus live
-    // outside #viewControls in the DOM (see the CSS comment above), so each
-    // pairing is explicit here rather than inferred from DOM position. Only
-    // one open at a time; clicking anywhere else closes whichever is open.
+    // ---- Footer dropdown groups (Views): each is a trigger button paired
+    // with a popover menu of .dropdownItem buttons. The menu lives outside
+    // #viewControls in the DOM (see the CSS comment above), so the pairing
+    // is explicit here rather than inferred from DOM position. Only one
+    // open at a time; clicking anywhere else closes whichever is open.
     const canvasWrapEl = document.getElementById("canvasWrap");
     const DROPDOWNS = [
       { trigger: document.getElementById("btnViewsTrigger"), menu: document.getElementById("viewsMenu") },
-      { trigger: document.getElementById("btnScaleTrigger"), menu: document.getElementById("scaleMenu") },
     ];
     function closeAllDropdowns() {
       DROPDOWNS.forEach(({ trigger, menu }) => {
@@ -892,10 +873,9 @@
     // scaled to the model — it feels fine on a ~30-unit floor plan but far
     // too fast on an ~8-unit cabinet. Scaling it (and the radius limits)
     // inversely with modelSize keeps zoom feeling consistent across very
-    // differently-sized models, and lets scale changes (see applyScale
-    // below) keep the zoom range sensible for the new size (84 is
-    // calibrated so a ~28-unit model, like the Cove floor plan was, lands
-    // close to the default wheelPrecision of 3).
+    // differently-sized models (84 is calibrated so a ~28-unit model, like
+    // the Cove floor plan was, lands close to the default wheelPrecision
+    // of 3).
     function applyZoomLimitsForModelSize() {
       camera.lowerRadiusLimit = modelSize * 0.1;
       camera.upperRadiusLimit = modelSize * 4;
@@ -925,33 +905,6 @@
       modelLight.shadowMaxZ = Math.max(1000, modelSize * 4);
       shadowGenerator.bias = 0.0001 * Math.max(1, modelSize / 28);
     }
-
-    // ---- Model scale (Scale dropdown: 100% / 50% / 25%). Scales every
-    // top-level imported node — everything else (meshes, shadows, the door
-    // bone, collections) is a descendant and scales right along with it.
-    // Camera target/radius are left alone so the change is visible in
-    // place; only the zoom range and speed get recalculated for the new
-    // size.
-    let modelRootNodes = [];
-    let modelMeshes = [];
-
-    function applyScale(factor) {
-      if (!modelRootNodes.length || !scene) return;
-      modelRootNodes.forEach((node) => {
-        node.scaling = new BABYLON.Vector3(factor, factor, factor);
-      });
-      scene.render(); // force world matrices to refresh before re-measuring
-      if (computeModelBounds(modelMeshes)) {
-        applyZoomLimitsForModelSize();
-        applyShadowRangeForModelSize();
-      }
-      document.querySelectorAll(".dropdownItem[data-scale]").forEach((btn) => {
-        btn.classList.toggle("active", parseFloat(btn.dataset.scale) === factor);
-      });
-    }
-    document.querySelectorAll(".dropdownItem[data-scale]").forEach((btn) => {
-      btn.addEventListener("click", () => applyScale(parseFloat(btn.dataset.scale)));
-    });
 
     function pad2(n) {
       return String(n).padStart(2, "0");
@@ -1016,7 +969,6 @@
       loadingEl.style.opacity = "1";
       viewControlsEl.classList.remove("ready");
       document.querySelectorAll(".dropdownItem[data-view]").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".dropdownItem[data-scale]").forEach((b) => b.classList.toggle("active", b.dataset.scale === "1"));
       closeAllDropdowns();
       projectTitleEl.textContent = project.title;
       projectContextEl.textContent = project.context;
@@ -1048,8 +1000,6 @@
       modelMax = null;
       modelCenter = BABYLON.Vector3.Zero();
       modelSize = 12;
-      modelRootNodes = [];
-      modelMeshes = [];
       userInteracted = false;
       orbitEnabled = false;
       updateOrbitButtonUI();
@@ -1148,9 +1098,7 @@
             shadowCasterMeshes.push(mesh);
           }
         });
-        modelMeshes = result.meshes;
-        modelRootNodes = [...result.meshes, ...(result.transformNodes || [])].filter((n) => !n.parent);
-        if (computeModelBounds(modelMeshes)) {
+        if (computeModelBounds(result.meshes)) {
           camera.setTarget(modelCenter);
           camera.radius = modelSize * 1.2;
           applyZoomLimitsForModelSize();

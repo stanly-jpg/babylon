@@ -30,15 +30,11 @@ If the model has its own light node named `"Light"` (e.g. exported from Blender 
 
 ### Footer buttons
 
-The bottom bar is the same fixed set of buttons for every project — Save, Views, Scale, Shadows, Orbit — each icon paired with a short label. Nothing in this bar is model-specific; anything that only applies to some models (the collections panel, animation/state toggles) lives in the right-side panels instead, described below.
+The bottom bar is the same fixed set of buttons for every project — Save, Views, Shadows, Orbit — each icon paired with a short label. Nothing in this bar is model-specific; anything that only applies to some models (the collections panel, animation/state toggles) lives in the right-side panels instead, described below.
 
-Views and Scale are dropdown groups: clicking the trigger opens a small popover menu above it (Portrait / Landscape / Diorama 30° / Diorama 60° under Views; 100% / 50% / 25% under Scale), and picking an item applies it and closes the menu. Only one dropdown is open at a time, and clicking anywhere else closes it. These popovers are deliberately *not* nested inside `#viewControls` in the DOM — that container needs `overflow-x: auto` for its own horizontal button-scroll on narrow screens, which (per the CSS overflow spec) forces `overflow-y` to clip too, so an absolutely-positioned popover anchored inside it would get cut off. Instead they're siblings of `#viewControls`, and `positionMenuAboveTrigger()` computes their `left`/`bottom` from the trigger button's `getBoundingClientRect()` each time they open.
+Views is a dropdown group: clicking the trigger opens a small popover menu above it (Portrait / Landscape / Diorama 30° / Diorama 60°), and picking an item applies it and closes the menu. Clicking anywhere else closes it too. This popover is deliberately *not* nested inside `#viewControls` in the DOM — that container needs `overflow-x: auto` for its own horizontal button-scroll on narrow screens, which (per the CSS overflow spec) forces `overflow-y` to clip too, so an absolutely-positioned popover anchored inside it would get cut off. Instead it's a sibling of `#viewControls`, and `positionMenuAboveTrigger()` computes its `left`/`bottom` from the trigger button's `getBoundingClientRect()` each time it opens.
 
 Portrait/Landscape/30°/60° only change the camera's angle (`alpha`/`beta`) — they leave `camera.radius` (zoom/distance) exactly as it was, so switching views never yanks the camera closer or farther from the model. Shadows calls `shadowGenerator.removeShadowCaster()`/`.addShadowCaster()` on every caster and toggles `receiveShadows`. Orbit plays/pauses the idle auto-rotate (see below) independently of whatever caused it to stop before — pressing it always resumes the spin, even after picking a view.
-
-### Model scale
-
-`applyScale(factor)` sets `.scaling` on every top-level node the import produced (found generically as `[...result.meshes, ...result.transformNodes].filter(n => !n.parent)`, so it works regardless of whether the loader wrapped everything in a single `"__root__"` node or not) — since everything else (meshes, shadows, the door bone, collection groups) is a descendant, it scales right along with it. The camera's target and radius are left alone so the resize is visible in place; only `computeModelBounds()`, `applyZoomLimitsForModelSize()`, and `applyShadowRangeForModelSize()` re-run afterward, so zoom range, pan speed, and shadow tuning all stay calibrated to the model's new size (see "Per-model zoom, pan, and shadow tuning" below). Switching projects resets scale to 100%.
 
 ### Right-side panels: Collections and Animations
 
@@ -49,7 +45,7 @@ Two panels can appear top-right, each independent and only shown when the loaded
 
 ### Per-model zoom, pan, and shadow tuning
 
-Several Babylon defaults are absolute values, not scaled to the model, so they can feel wrong at either end of the size range — fine on a ~28-unit floor plan but wrong on an ~8-unit cabinet or a real-world-scale (~100+ unit) site plan. `applyZoomLimitsForModelSize()` and `applyShadowRangeForModelSize()` (in `index.html`) recalculate all of these from `modelSize` right after the camera bounding box is known — on initial load, and again after a Scale dropdown change:
+Several Babylon defaults are absolute values, not scaled to the model, so they can feel wrong at either end of the size range — fine on a ~28-unit floor plan but wrong on an ~8-unit cabinet or a real-world-scale (~100+ unit) site plan. `applyZoomLimitsForModelSize()` and `applyShadowRangeForModelSize()` (in `index.html`) recalculate all of these from `modelSize` right after the camera bounding box is known, once per project load:
 
 - `camera.wheelPrecision = Math.max(3, 84 / modelSize)` — smaller models get a slower, finer scroll-zoom.
 - `camera.lowerRadiusLimit` / `upperRadiusLimit` — scale with `modelSize` so the zoom range stays sensible.
