@@ -67,7 +67,7 @@ Plain Babylon.js defaults (same as the [Babylon.js Sandbox](https://sandbox.baby
 - Scroll: zoom
 - Right-drag: pan
 
-The camera idles by slowly auto-rotating until the user interacts (drags, or clicks a view-preset button) or presses the Orbit footer button to pause it explicitly.
+Idle auto-rotate is available but off by default — press the Orbit footer button to start it. Once running, it stops as soon as the user interacts (drags, or clicks a view-preset button), same as pressing Orbit again.
 
 ## Responsive layout
 

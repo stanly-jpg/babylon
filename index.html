@@ -638,7 +638,7 @@
     let camera = null;
     let modelMin = null, modelMax = null, modelCenter = BABYLON.Vector3.Zero(), modelSize = 12;
     let userInteracted = false;
-    let orbitEnabled = true;
+    let orbitEnabled = false;
     let modelLight = null;
     let shadowGenerator = null;
     let shadowCasterMeshes = [];
@@ -1051,7 +1051,7 @@
       modelRootNodes = [];
       modelMeshes = [];
       userInteracted = false;
-      orbitEnabled = true;
+      orbitEnabled = false;
       updateOrbitButtonUI();
       cabinetDoorNode = null;
       cabinetDoorOpen = false;
