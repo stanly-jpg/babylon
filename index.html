@@ -577,6 +577,10 @@
         context: "Placeholder model — to be replaced",
         rootUrl: "projects/lenovo-event/",
         fileName: "lenovo-floorplan.glb",
+        // These Collection(s)' meshes never cast or receive shadows, and
+        // stay excluded even when the user clicks the Shadows footer
+        // toggle — see the noShadowCollections handling below.
+        noShadowCollections: ["SENSORS"],
       },
       {
         id: "server-cabinet",
@@ -1132,7 +1136,26 @@
         // a panel to toggle each one's visibility.
         const importRoot = result.meshes.find((m) => m.name === "__root__");
         if (importRoot) {
-          renderCollectionsPanel(findCollectionGroups(scene, importRoot));
+          const collectionGroups = findCollectionGroups(scene, importRoot);
+          renderCollectionsPanel(collectionGroups);
+
+          // A project can list Collection names whose meshes should never
+          // cast or receive shadows — permanently, not just as the default
+          // state: they're dropped from shadowCasterMeshes entirely, so
+          // the Shadows footer toggle's loop never touches them again.
+          if (project.noShadowCollections && project.noShadowCollections.length) {
+            const lockedNames = new Set(project.noShadowCollections);
+            collectionGroups
+              .filter((group) => lockedNames.has(group.name))
+              .forEach((group) => {
+                group.node.getChildMeshes().forEach((mesh) => {
+                  mesh.receiveShadows = false;
+                  shadowGenerator.removeShadowCaster(mesh);
+                  const i = shadowCasterMeshes.indexOf(mesh);
+                  if (i !== -1) shadowCasterMeshes.splice(i, 1);
+                });
+              });
+          }
         }
 
         // A cage/canopy netting material ("Material") may have a texture
