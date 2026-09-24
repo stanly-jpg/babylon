@@ -601,6 +601,9 @@
         context: "Site plan",
         rootUrl: "projects/office-layout/",
         fileName: "office-layout.glb",
+        // Hidden from the sidebar for now — still reachable directly via
+        // #office-layout if linked to. Remove this flag to bring it back.
+        hidden: true,
       },
     ];
 
@@ -950,7 +953,7 @@
 
     function renderProjectList(activeId) {
       projectListEl.innerHTML = "";
-      PROJECTS.forEach((p) => {
+      PROJECTS.filter((p) => !p.hidden).forEach((p) => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "projectItem" + (p.id === activeId ? " active" : "");
