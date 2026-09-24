@@ -69,6 +69,8 @@ Idle auto-rotate is available but off by default — press the Orbit footer butt
 
 The sidebar is a slide-in drawer (hamburger button, top-left) on phones and tablets, and a persistent panel that pushes the viewer over on wider screens (≥900px) — toggle it either way with the same button. Selecting a project on a narrow screen closes the drawer automatically.
 
+On ≥900px screens, opening the persistent panel resizes `#canvasWrap` via a CSS `margin-left` transition rather than a `window` resize — a plain `window.addEventListener("resize", ...)` never sees that, so `engine.resize()` never ran and the canvas's internal render resolution went stale relative to its new CSS box, which the browser then stretched to fit (visible distortion, worse the more the sidebar's width differs from the resulting change). A `ResizeObserver` on `#canvasWrap` calls `engine.resize()` on every actual box-size change instead, which covers the sidebar transition, window resizes, and orientation changes uniformly.
+
 ## Run locally
 
 Serve the repo root with any static server, e.g.:

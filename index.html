@@ -1196,9 +1196,16 @@
     engine.runRenderLoop(() => {
       if (scene) scene.render();
     });
-    window.addEventListener("resize", () => {
-      engine.resize();
-    });
+    // A plain "window resize" listener misses anything that changes
+    // #canvasWrap's own box without the window changing size — e.g. the
+    // sidebar's margin-left transition when it opens/closes. Babylon then
+    // keeps rendering at the stale resolution and the browser stretches
+    // that image into the new box, which is what "the canvas stretches
+    // when the sidebar opens/closes" actually was. Observing the wrapper
+    // directly catches that (continuously, so it also tracks smoothly
+    // through the sidebar's 0.25s CSS transition) as well as window
+    // resizes, since the wrapper resizes then too.
+    new ResizeObserver(() => engine.resize()).observe(canvasWrapEl);
   </script>
 </body>
 </html>
