@@ -182,6 +182,9 @@
       background: rgba(20, 24, 36, 0.95);
       border-color: rgba(234, 242, 255, 0.5);
     }
+    #sidebarToggle[hidden] {
+      display: none;
+    }
     #topbar .titles {
       min-width: 0;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
@@ -617,14 +620,14 @@
         hidden: true,
       },
       {
-        id: "velmiro-office",
+        id: "fuse",
         tag: "Scene 04",
-        title: "Velmiro Office",
-        context: "Office layout",
-        rootUrl: "projects/velmiro-office/",
-        fileName: "velmiro-office.glb",
+        title: "Fuse",
+        context: "Interior layout",
+        rootUrl: "projects/fuse/",
+        fileName: "fuse.glb",
         // Hidden from the sidebar for now — still reachable directly via
-        // #velmiro-office if linked to. Remove this flag to bring it back.
+        // #fuse if linked to. Remove this flag to bring it back.
         hidden: true,
       },
     ];
@@ -996,10 +999,11 @@
     });
 
     // ---- Sidebar open/close ----
+    const sidebarToggleEl = document.getElementById("sidebarToggle");
     function setSidebarOpen(open) {
       sidebar.classList.toggle("open", open);
     }
-    document.getElementById("sidebarToggle").addEventListener("click", () => {
+    sidebarToggleEl.addEventListener("click", () => {
       setSidebarOpen(!sidebar.classList.contains("open"));
     });
     sidebarBackdrop.addEventListener("click", () => setSidebarOpen(false));
@@ -1033,6 +1037,14 @@
       closeAllDropdowns();
       projectTitleEl.textContent = project.title;
       projectContextEl.textContent = project.context;
+
+      // A hidden project (see the PROJECTS array) is meant to be a private,
+      // standalone link — hide the sidebar toggle entirely (not just the
+      // project's own list entry) so a visitor can't discover or open it to
+      // see what else is on the site, and force it closed even on wide
+      // screens where it would otherwise default open.
+      sidebarToggleEl.hidden = !!project.hidden;
+      if (project.hidden) setSidebarOpen(false);
 
       if (scene) scene.dispose();
 

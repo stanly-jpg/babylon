@@ -10,7 +10,7 @@ projects/
   lenovo-event/lenovo-floorplan.glb                "Lenovo Event" model (placeholder, to be replaced) — humanoid walk animation
   server-cabinet/server-cabinet.glb                "Server Cabinet" model, with an openable door
   office-layout/office-layout.glb                  "Office Layout" model — site plan (hidden from sidebar)
-  velmiro-office/velmiro-office.glb                "Velmiro Office" model — office layout (hidden from sidebar)
+  fuse/fuse.glb                                    "Fuse" model — interior layout (hidden from sidebar)
 ```
 
 There's only one HTML page. The `PROJECTS` array near the top of `index.html`'s `<script>` lists each project (id, title, context line, and where its `.glb` lives); the sidebar is rendered from that array, and picking one loads its model into the same Babylon scene. The `projects/<name>/` folders hold nothing but the model file — there are no per-project `index.html` pages.
@@ -27,7 +27,7 @@ Opening the site with no `#hash` loads `PROJECTS[0]` (currently Lenovo). Each pr
    ```
 3. That's it — the sidebar entry, routing, camera framing, shadows, and lighting are all generic and driven by this array.
 
-Add `hidden: true` to keep an entry out of the sidebar list (`renderProjectList` filters it out) while leaving it reachable directly via its `#id` URL — `selectProject()` doesn't filter, so a direct link still resolves. Used for work-in-progress or draft models (see office-layout, velmiro-office) — remove the flag once ready to show it.
+Add `hidden: true` to keep an entry out of the sidebar list (`renderProjectList` filters it out) while leaving it reachable directly via its `#id` URL — `selectProject()` doesn't filter, so a direct link still resolves. Used for work-in-progress or draft models (see office-layout, fuse) — remove the flag once ready to show it. Loading a hidden project also hides the hamburger button itself (not just its entry in the list), so a visitor with the direct link can't discover or open the sidebar to see what else is on the site; loading any non-hidden project restores it.
 
 If the model has its own light node named `"Light"` (e.g. exported from Blender with a Sun), the viewer uses it for shadows automatically (including compensating for a case where the light's rotation lives on a parent node rather than the light itself). Otherwise it falls back to a generic directional light positioned above the model.
 
